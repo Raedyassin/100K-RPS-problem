@@ -8,8 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
+// “HTTP keep-alive allows a single client to send multiple requests over the same TCP connection.
+// Connection pooling does NOT reuse connections across different clients; it is mainly used for backend resources like databases.”
 const ROOT_DIR = "./public" // Serve files from this directory
 
 func main() {
@@ -39,37 +42,51 @@ func handleHTTPConnection(conn net.Conn) {
 
 	reader := bufio.NewReader(conn)
 
-	// Parse request
-	requestLine, err := reader.ReadString('\n')
-	if err != nil {
-		return
-	}
-
-	parts := strings.Fields(requestLine)
-	if len(parts) < 3 {
-		sendError(conn, 400, "Bad Request")
-		return
-	}
-
-	method := parts[0]
-	path := parts[1]
-
-	// Read and discard headers
+	// Keep-Alive loop: handle multiple requests on same connection
 	for {
-		line, err := reader.ReadString('\n')
-		if err != nil || line == "\r\n" {
-			break
+		// Set read timeout (prevent slowloris attacks)
+		conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+
+		requestLine, err := reader.ReadString('\n')
+		if err != nil {
+			return // Connection closed or timeout
+		}
+
+		parts := strings.Fields(requestLine)
+		if len(parts) < 3 {
+			sendError(conn, 400, "Bad Request")
+			return
+		}
+
+		method := parts[0]
+		path := parts[1]
+
+		// Parse headers and check for Connection: close
+		keepAlive := true
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil || line == "\r\n" {
+				break
+			}
+
+			if strings.HasPrefix(strings.ToLower(line), "connection: close") {
+				keepAlive = false
+			}
+		}
+
+		// Handle request
+		if method != "GET" {
+			sendError(conn, 405, "Method Not Allowed")
+			return
+		}
+
+		serveFile(conn, path)
+
+		// If client wants to close, exit loop
+		if !keepAlive {
+			return
 		}
 	}
-
-	// Only handle GET requests
-	if method != "GET" {
-		sendError(conn, 405, "Method Not Allowed")
-		return
-	}
-
-	// Serve file
-	serveFile(conn, path)
 }
 
 func serveFile(conn net.Conn, urlPath string) {
