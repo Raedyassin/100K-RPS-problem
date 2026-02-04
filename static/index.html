@@ -1,5 +1,86 @@
 <!DOCTYPE html>
 <html>
-<head><title>Test</title></head>
-<body><h1>It works!</h1></body>
+<head>
+    <title>High-Performance Web Server v2.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 900px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; font-size: 2.5em; margin-bottom: 10px; }
+        .subtitle { color: #666; font-size: 1.2em; margin-bottom: 30px; }
+        .success { background: #d4edda; border: 2px solid #c3e6cb; color: #155724;
+                   padding: 20px; border-radius: 10px; margin: 20px 0; font-size: 1.1em; }
+        .architecture {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .feature-icon { font-size: 2em; margin-bottom: 10px; }
+        .feature-title { font-weight: bold; color: #333; margin-bottom: 5px; font-size: 1.1em; }
+        .feature-desc { color: #666; font-size: 0.95em; line-height: 1.5; }
+        .highlight { background: #fff3cd; border: 2px solid #ffc107; padding: 15px;
+                     border-radius: 10px; margin: 20px 0; }
+        .highlight strong { color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 High-Performance Web Server v2.0</h1>
+        <p class="subtitle">Connection Pool Architecture • Event-Driven I/O • Zero-Copy Transfer</p>
+        
+        <div class="success">
+            <strong>✅ SERVER RUNNING!</strong> All systems operational.
+        </div>
+        
+        <div class="highlight">
+            <strong>📌 KEY FEATURE:</strong> Connection Pool with 1000 slots per worker.
+            Each connection handles ONE request, then slot is freed for next connection.
+            No keep-alive reuse!
+        </div>
+        
+        <div class="architecture">
+            <div class="feature">
+                <div class="feature-icon">🔌</div>
+                <div class="feature-title">Connection Pool</div>
+                <div class="feature-desc">1000 pre-allocated slots per worker. One request per connection, then immediate close.</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-title">Event-Driven</div>
+                <div class="feature-desc">IOCP (Windows) or epoll (Linux) for efficient I/O without threads.</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📁</div>
+                <div class="feature-title">Zero-Copy</div>
+                <div class="feature-desc">sendfile()/TransmitFile() for direct kernel-to-network file transfer.</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔄</div>
+                <div class="feature-title">Multi-Process</div>
+                <div class="feature-desc">One worker per CPU core, bypassing Python GIL.</div>
+            </div>
+        </div>
+    </div>
+</body>
 </html>
