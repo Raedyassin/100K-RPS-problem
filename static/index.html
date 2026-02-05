@@ -1,86 +1,247 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>High-Performance Web Server v2.0</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Performance Server v2.0 - Connection Pool Architecture</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             padding: 20px;
+            color: #333;
         }
+        
         .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
             background: white;
             border-radius: 20px;
             padding: 40px;
-            max-width: 900px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+            text-align: center;
         }
-        h1 { color: #667eea; font-size: 2.5em; margin-bottom: 10px; }
-        .subtitle { color: #666; font-size: 1.2em; margin-bottom: 30px; }
-        .success { background: #d4edda; border: 2px solid #c3e6cb; color: #155724;
-                   padding: 20px; border-radius: 10px; margin: 20px 0; font-size: 1.1em; }
-        .architecture {
+        
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #764ba2;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        .cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 30px 0;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
-        .feature {
-            background: #f8f9fa;
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .feature-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            color: #555;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-list li::before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .stats {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .stats h2 {
+            margin-bottom: 20px;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-item {
+            background: rgba(255,255,255,0.2);
             padding: 20px;
             border-radius: 10px;
-            border-left: 4px solid #667eea;
+            text-align: center;
         }
-        .feature-icon { font-size: 2em; margin-bottom: 10px; }
-        .feature-title { font-weight: bold; color: #333; margin-bottom: 5px; font-size: 1.1em; }
-        .feature-desc { color: #666; font-size: 0.95em; line-height: 1.5; }
-        .highlight { background: #fff3cd; border: 2px solid #ffc107; padding: 15px;
-                     border-radius: 10px; margin: 20px 0; }
-        .highlight strong { color: #856404; }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .cards {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 High-Performance Web Server v2.0</h1>
-        <p class="subtitle">Connection Pool Architecture • Event-Driven I/O • Zero-Copy Transfer</p>
-        
-        <div class="success">
-            <strong>✅ SERVER RUNNING!</strong> All systems operational.
+        <div class="header">
+            <h1>🚀 High-Performance Web Server v2.0</h1>
+            <p class="subtitle">Connection Pool Architecture</p>
         </div>
         
-        <div class="highlight">
-            <strong>📌 KEY FEATURE:</strong> Connection Pool with 1000 slots per worker.
-            Each connection handles ONE request, then slot is freed for next connection.
-            No keep-alive reuse!
+        <div class="cards">
+            <div class="card">
+                <h2>🎯 Connection Pool</h2>
+                <p>Each worker maintains 1000 pre-allocated connection slots:</p>
+                <ul class="feature-list">
+                    <li>Fair queuing (FIFO)</li>
+                    <li>Automatic resource management</li>
+                    <li>Prevents server overload</li>
+                    <li>One request per connection</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h2>⚡ Event-Driven I/O</h2>
+                <p>Platform-optimized async I/O:</p>
+                <ul class="feature-list">
+                    <li>IOCP on Windows</li>
+                    <li>epoll on Linux</li>
+                    <li>kqueue on BSD/macOS</li>
+                    <li>No thread-per-connection</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h2>🔥 Zero-Copy Transfer</h2>
+                <p>Optimized file serving:</p>
+                <ul class="feature-list">
+                    <li>sendfile() on Linux</li>
+                    <li>TransmitFile() on Windows</li>
+                    <li>Minimal CPU usage</li>
+                    <li>Maximum throughput</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h2>🖥️ Multi-Process</h2>
+                <p>Utilize all CPU cores:</p>
+                <ul class="feature-list">
+                    <li>One process per core</li>
+                    <li>Bypass Python GIL</li>
+                    <li>True parallelism</li>
+                    <li>SO_REUSEPORT support</li>
+                </ul>
+            </div>
         </div>
         
-        <div class="architecture">
-            <div class="feature">
-                <div class="feature-icon">🔌</div>
-                <div class="feature-title">Connection Pool</div>
-                <div class="feature-desc">1000 pre-allocated slots per worker. One request per connection, then immediate close.</div>
+        <div class="stats">
+            <h2>📊 Expected Performance</h2>
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-value">100K+</div>
+                    <div class="stat-label">Requests/Second</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">&lt;10ms</div>
+                    <div class="stat-label">Avg Latency</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">1000</div>
+                    <div class="stat-label">Pool Size/Worker</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="total-capacity">-</div>
+                    <div class="stat-label">Total Capacity</div>
+                </div>
             </div>
-            <div class="feature">
-                <div class="feature-icon">⚡</div>
-                <div class="feature-title">Event-Driven</div>
-                <div class="feature-desc">IOCP (Windows) or epoll (Linux) for efficient I/O without threads.</div>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">📁</div>
-                <div class="feature-title">Zero-Copy</div>
-                <div class="feature-desc">sendfile()/TransmitFile() for direct kernel-to-network file transfer.</div>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">🔄</div>
-                <div class="feature-title">Multi-Process</div>
-                <div class="feature-desc">One worker per CPU core, bypassing Python GIL.</div>
-            </div>
+        </div>
+        
+        <div class="footer">
+            <p>High-Performance Python Web Server • Connection Pool Architecture</p>
+            <p>No Keep-Alive • One Request Per Connection • Automatic Recycling</p>
         </div>
     </div>
+    
+    <script>
+        // Calculate total capacity (workers × pool size)
+        // This is a demo - in production you'd fetch this from server
+        const cpuCores = navigator.hardwareConcurrency || 4;
+        const poolSize = 1000;
+        const totalCapacity = cpuCores * poolSize;
+        document.getElementById('total-capacity').textContent = totalCapacity.toLocaleString();
+    </script>
 </body>
 </html>
