@@ -32,6 +32,12 @@ ARCHITECTURE OVERVIEW:
     - Always sends "Connection: close"
     - Simpler state management
 
+6. NO SHARED STATE
+    - Each worker maintains its own statistics
+    - No Manager process needed
+    - Zero inter-process communication overhead
+    - Completely lock-free architecture
+
 BOTTLENECKS & SOLUTIONS:
 ========================
 
@@ -56,6 +62,9 @@ BOTTLENECK #6: Memory allocation
 BOTTLENECK #7: Kernel socket backlog
 → SOLUTION: Large backlog (2048), proper tuning
 
+BOTTLENECK #8: Shared state synchronization
+→ SOLUTION: No shared state - each worker independent
+
 ENDPOINTS:
 ==========
 GET /health        → Returns 200 OK with JSON message
@@ -74,6 +83,7 @@ from typing import Optional, Tuple
 from datetime import datetime
 import time
 import json
+import signal
 
 # ═════════════════════════════════════════════════════════════════════════
 # PLATFORM DETECTION & OPTIMIZATION
@@ -170,10 +180,10 @@ class Logger:
             size_str = f"{size/(1024*1024):.1f}MB"
         
         print(f"{Colors.DIM}[{timestamp}][W{worker_id}:S{pool_slot:03d}]{Colors.END} "
-                f"{Colors.BOLD}{method:4s}{Colors.END} "
-                f"{path:30s} "
-                f"{status_color}{status}{Colors.END} "
-                f"{Colors.DIM}{size_str:>8s} {duration_ms:6.2f}ms{Colors.END}")
+              f"{Colors.BOLD}{method:4s}{Colors.END} "
+              f"{path:30s} "
+              f"{status_color}{status}{Colors.END} "
+              f"{Colors.DIM}{size_str:>8s} {duration_ms:6.2f}ms{Colors.END}")
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -217,8 +227,8 @@ class Config:
     HEADER_TIMEOUT = 5.0    # Max time to read headers
     
     # Logging
-    ENABLE_REQUEST_LOGGING = False # True/False
-    ENABLE_ERROR_LOGGING = False # True/False
+    ENABLE_REQUEST_LOGGING = False  # True/False
+    ENABLE_ERROR_LOGGING = False    # True/False
     
     # Pre-compiled regex for request parsing (avoid re-compilation)
     REQUEST_LINE_REGEX = re.compile(
@@ -227,12 +237,102 @@ class Config:
     )
 
 
-# Shared statistics (using multiprocessing.Manager for cross-process sharing)
-# NOTE: We use Manager.dict() which is thread-safe across processes
-# It uses locks internally, but this is ONLY for statistics (non-critical path)
-# The hot path (request handling) is completely lock-free
-manager = None
-stats_dict = None
+# ═════════════════════════════════════════════════════════════════════════
+# WORKER STATISTICS (Per-Worker, No Shared State)
+# ═════════════════════════════════════════════════════════════════════════
+
+class WorkerStats:
+    """
+    Per-worker statistics tracker
+    
+    NO LOCKS - Each worker has its own instance
+    No sharing between processes
+    Completely thread-safe because it's isolated
+    """
+    
+    def __init__(self, worker_id: int):
+        self.worker_id = worker_id
+        self.total_requests = 0
+        self.total_bytes = 0
+        self.start_time = time.time()
+        
+        # Request breakdown
+        self.requests_by_status = {
+            200: 0,
+            400: 0,
+            404: 0,
+            405: 0,
+            408: 0,
+            500: 0,
+        }
+    
+    def record_request(self, status_code: int, response_size: int):
+        """Record a completed request"""
+        self.total_requests += 1
+        self.total_bytes += response_size
+        
+        if status_code in self.requests_by_status:
+            self.requests_by_status[status_code] += 1
+        else:
+            self.requests_by_status[status_code] = 1
+    
+    def get_summary(self) -> dict:
+        """Get statistics summary"""
+        uptime = time.time() - self.start_time
+        rps = self.total_requests / uptime if uptime > 0 else 0
+        
+        return {
+            'worker_id': self.worker_id,
+            'total_requests': self.total_requests,
+            'total_bytes': self.total_bytes,
+            'uptime_seconds': uptime,
+            'requests_per_second': rps,
+            'requests_by_status': self.requests_by_status,
+        }
+    
+    def print_summary(self):
+        """Print formatted statistics"""
+        summary = self.get_summary()
+        
+        Logger.header(f"WORKER {self.worker_id} STATISTICS")
+        
+        print(f"{Colors.BRIGHT_CYAN}Total Requests:{Colors.END} "
+                f"{Colors.BRIGHT_WHITE}{summary['total_requests']:,}{Colors.END}")
+        
+        # Format bytes
+        total_bytes = summary['total_bytes']
+        if total_bytes < 1024:
+            size_str = f"{total_bytes} B"
+        elif total_bytes < 1024 * 1024:
+            size_str = f"{total_bytes/1024:.2f} KB"
+        elif total_bytes < 1024 * 1024 * 1024:
+            size_str = f"{total_bytes/(1024*1024):.2f} MB"
+        else:
+            size_str = f"{total_bytes/(1024*1024*1024):.2f} GB"
+        
+        print(f"{Colors.BRIGHT_CYAN}Total Data Sent:{Colors.END} "
+                f"{Colors.BRIGHT_WHITE}{size_str}{Colors.END}")
+        
+        print(f"{Colors.BRIGHT_CYAN}Uptime:{Colors.END} "
+                f"{Colors.BRIGHT_WHITE}{summary['uptime_seconds']:.2f}s{Colors.END}")
+        
+        print(f"{Colors.BRIGHT_CYAN}Average RPS:{Colors.END} "
+                f"{Colors.BRIGHT_WHITE}{summary['requests_per_second']:.2f}{Colors.END}")
+        
+        print(f"\n{Colors.BRIGHT_CYAN}Requests by Status:{Colors.END}")
+        for status, count in sorted(summary['requests_by_status'].items()):
+            if count > 0:
+                if 200 <= status < 300:
+                    color = Colors.BRIGHT_GREEN
+                elif 400 <= status < 500:
+                    color = Colors.BRIGHT_YELLOW
+                else:
+                    color = Colors.BRIGHT_RED
+                
+                print(f"  {color}{status}{Colors.END}: "
+                        f"{Colors.BRIGHT_WHITE}{count:,}{Colors.END}")
+        
+        print()
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -248,11 +348,11 @@ async def sendfile_portable(sock: socket.socket, filepath: Path,
     
     Traditional approach:
     File → [Kernel buffer] → [User space buffer] → [Kernel buffer] → Network
-           (disk read)        (copy #1)             (copy #2)         (send)
+            (disk read)        (copy #1)             (copy #2)         (send)
     
     Zero-copy approach:
     File → [Kernel buffer] → Network
-           (disk read)        (DMA transfer to NIC)
+            (disk read)        (DMA transfer to NIC)
     
     Benefits:
     - Eliminates 2 memory copies
@@ -428,7 +528,7 @@ class HTTPResponse:
     
     @staticmethod
     def build_response(status: int, body: bytes, 
-                      content_type: bytes = b'Content-Type: application/json; charset=utf-8\r\n') -> bytes:
+                        content_type: bytes = b'Content-Type: application/json; charset=utf-8\r\n') -> bytes:
         """
         Build complete HTTP response (always closes connection)
         
@@ -474,16 +574,10 @@ class RequestHandler:
     No shared state between instances
     """
     
-    # Pre-allocated responses for common cases
-    HEALTH_RESPONSE_BODY = json.dumps({
-        "status": "ok",
-        "message": "Server is running",
-        "timestamp": None  # Will be filled per-request
-    }).encode('utf-8')
-    
-    def __init__(self, worker_id: int, pool_slot: int):
+    def __init__(self, worker_id: int, pool_slot: int, stats: WorkerStats):
         self.worker_id = worker_id
         self.pool_slot = pool_slot
+        self.stats = stats  # Per-worker stats object
     
     async def handle_request(self, reader: asyncio.StreamReader, 
                             writer: asyncio.StreamWriter) -> Tuple[int, int]:
@@ -524,7 +618,7 @@ class RequestHandler:
                 if Config.ENABLE_REQUEST_LOGGING:
                     duration_ms = (time.perf_counter() - start_time) * 1000
                     Logger.request("???", "???", 400, len(response), 
-                                 duration_ms, self.worker_id, self.pool_slot)
+                                    duration_ms, self.worker_id, self.pool_slot)
                 
                 return 400, len(response)
             
@@ -561,13 +655,10 @@ class RequestHandler:
             if Config.ENABLE_REQUEST_LOGGING:
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 Logger.request(method, path, status_code, response_size, 
-                             duration_ms, self.worker_id, self.pool_slot)
+                                duration_ms, self.worker_id, self.pool_slot)
             
-            # Update statistics (this uses locks internally in Manager.dict, 
-            # but it's OK because it's not in the critical path - just stats)
-            if stats_dict is not None:
-                stats_dict['total_requests'] = stats_dict.get('total_requests', 0) + 1
-                stats_dict['total_bytes'] = stats_dict.get('total_bytes', 0) + response_size
+            # Update per-worker statistics (NO LOCKS - local to this worker)
+            self.stats.record_request(status_code, response_size)
             
             return status_code, response_size
             
@@ -598,7 +689,8 @@ class RequestHandler:
         health_data = {
             "status": "ok",
             "message": "Server is running",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "worker_id": self.worker_id
         }
         body = json.dumps(health_data).encode('utf-8')
         
@@ -722,19 +814,19 @@ class ConnectionPool:
     Alternative solutions WITHOUT semaphore:
     ----------------------------------------
     1. NO LIMIT (bad):
-       - Server accepts unlimited connections
-       - Risk of resource exhaustion
-       - OOM kills, socket exhaustion
+        - Server accepts unlimited connections
+        - Risk of resource exhaustion
+        - OOM kills, socket exhaustion
     
     2. TCP backlog only (insufficient):
-       - Kernel queues connections in listen() backlog
-       - But once accept()ed, connection consumes resources
-       - No application-level control
-    
+        - Kernel queues connections in listen() backlog
+        - But once accept()ed, connection consumes resources
+        - No application-level control
+        
     3. Custom queue with atomic counter (complex):
-       - Use threading.atomic or multiprocessing.Value
-       - More code, same internal locking
-       - Semaphore is the standard solution
+        - Use threading.atomic or multiprocessing.Value
+        - More code, same internal locking
+        - Semaphore is the standard solution
     
     VERDICT: Semaphore is the RIGHT tool here
     -----------------------------------------
@@ -746,29 +838,30 @@ class ConnectionPool:
     NO LOCKS in request handling itself - that's what matters!
     """
     
-    def __init__(self, size: int, worker_id: int):
+    def __init__(self, size: int, worker_id: int, stats: WorkerStats):
         self.size = size
         self.worker_id = worker_id
+        self.stats = stats  # Per-worker stats
         
         # ⚠️ SEMAPHORE WITH INTERNAL LOCKING (explained above)
         # This limits concurrent connections to 'size'
         self.semaphore = asyncio.Semaphore(size)
         
-        # These are just for statistics (not critical)
+        # These are just for monitoring (not critical)
         self.active_connections = 0
         self.total_handled = 0
         
         Logger.success(f"Worker {worker_id}: Pool initialized ({size} slots)")
     
     async def handle_connection(self, reader: asyncio.StreamReader, 
-                               writer: asyncio.StreamWriter,
-                               pool_slot: int):
+                                writer: asyncio.StreamWriter,
+                                pool_slot: int):
         """
         Handle one connection using one pool slot
         
         FLOW:
         1. Acquire slot from pool (WAITS if pool full)
-           ⚠️ This is where semaphore locking happens (very fast)
+            ⚠️ This is where semaphore locking happens (very fast)
         2. Set TCP_NODELAY (disable Nagle's algorithm for low latency)
         3. Handle ONE request
         4. Close connection
@@ -791,7 +884,7 @@ class ConnectionPool:
                     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 
                 # Create handler and process request
-                handler = RequestHandler(self.worker_id, pool_slot)
+                handler = RequestHandler(self.worker_id, pool_slot, self.stats)
                 await handler.handle_request(reader, writer)
                 
                 self.total_handled += 1
@@ -847,8 +940,11 @@ async def run_worker(host: str, port: int, worker_id: int):
     
     Logger.info(f"Worker {worker_id} starting on {host}:{port}")
     
-    # Create connection pool
-    pool = ConnectionPool(Config.CONNECTION_POOL_SIZE, worker_id)
+    # Create per-worker statistics (NO SHARED STATE)
+    stats = WorkerStats(worker_id)
+    
+    # Create connection pool with stats reference
+    pool = ConnectionPool(Config.CONNECTION_POOL_SIZE, worker_id, stats)
     
     # Track slot assignment (round-robin)
     next_slot = 0
@@ -881,9 +977,15 @@ async def run_worker(host: str, port: int, worker_id: int):
     
     Logger.success(f"Worker {worker_id} ready")
     
-    # Run forever
-    async with server:
-        await server.serve_forever()
+    # Run forever (until interrupted)
+    try:
+        async with server:
+            await server.serve_forever()
+    except asyncio.CancelledError:
+        pass
+    finally:
+        # Print worker statistics on shutdown
+        stats.print_summary()
 
 
 def worker_process(host: str, port: int, worker_id: int):
@@ -893,10 +995,11 @@ def worker_process(host: str, port: int, worker_id: int):
     Each worker:
     - Has its own event loop (no GIL contention)
     - Has its own connection pool
+    - Has its own statistics (NO SHARED STATE)
     - Binds to same port (SO_REUSEPORT)
     - Processes requests independently
     
-    NO LOCKS between workers - true parallelism!
+    COMPLETELY LOCK-FREE - No inter-process communication!
     """
     
     # Set up event loop
@@ -913,7 +1016,7 @@ def worker_process(host: str, port: int, worker_id: int):
     try:
         loop.run_until_complete(run_worker(host, port, worker_id))
     except KeyboardInterrupt:
-        pass
+        Logger.info(f"Worker {worker_id} shutting down...")
     finally:
         loop.close()
 
@@ -928,9 +1031,9 @@ def print_banner():
 {Colors.BRIGHT_CYAN}{Colors.BOLD}
 ╔═══════════════════════════════════════════════════════════════════╗
 ║                                                                   ║
-║          🚀  HIGH-PERFORMANCE WEB SERVER v3.0  🚀                 ║
+║          🚀  HIGH-PERFORMANCE WEB SERVER v3.0  🚀                ║
 ║                                                                   ║
-║              100K+ RPS • Connection Pool • Zero-Copy             ║
+║              100K+ RPS • Connection Pool • Zero-Copy              ║
 ║                                                                   ║
 ╚═══════════════════════════════════════════════════════════════════╝
 {Colors.END}"""
@@ -967,6 +1070,12 @@ def print_architecture():
     print(f"{Colors.BRIGHT_CYAN}{Colors.BOLD}MULTI-PROCESS:{Colors.END}")
     print(f"  {Colors.BRIGHT_GREEN}✓ {Config.WORKER_PROCESSES} workers (GIL bypass){Colors.END}")
     print()
+    
+    print(f"{Colors.BRIGHT_CYAN}{Colors.BOLD}NO SHARED STATE:{Colors.END}")
+    print(f"  {Colors.BRIGHT_GREEN}✓ Each worker has independent statistics{Colors.END}")
+    print(f"  {Colors.BRIGHT_GREEN}✓ Zero inter-process communication{Colors.END}")
+    print(f"  {Colors.BRIGHT_GREEN}✓ Completely lock-free architecture{Colors.END}")
+    print()
 
 
 def print_endpoints():
@@ -986,71 +1095,33 @@ def print_endpoints():
     print()
 
 
-def create_sample_html():
-    """Create sample index.html if not exists"""
-    Config.STATIC_DIR.mkdir(exist_ok=True)
+def check_static_directory():
+    """Check if static directory and index.html exist"""
+    if not Config.STATIC_DIR.exists():
+        Logger.error(f"Static directory not found: {Config.STATIC_DIR.absolute()}")
+        Logger.info("Please create the directory and add your files")
+        return False
     
-    index_file = Config.STATIC_DIR / 'index.html'
+    index_file = Config.STATIC_DIR / Config.INDEX_FILE
     if not index_file.exists():
-        html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High-Performance Web Server</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        h1 { text-align: center; font-size: 2.5em; }
-        .info { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; }
-        .feature { margin: 10px 0; }
-        .feature::before { content: "✓ "; color: #4ade80; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <h1>🚀 High-Performance Web Server</h1>
-    <div class="info">
-        <h2>Features:</h2>
-        <div class="feature">100K+ RPS capable</div>
-        <div class="feature">Event-driven I/O (epoll/IOCP)</div>
-        <div class="feature">Connection pooling</div>
-        <div class="feature">Zero-copy file transfer</div>
-        <div class="feature">Multi-process architecture</div>
-        <div class="feature">No connection reuse (stateless)</div>
-    </div>
-</body>
-</html>
-"""
-        index_file.write_text(html)
-        Logger.success(f"Created {index_file}")
+        Logger.warning(f"index.html not found in {Config.STATIC_DIR.absolute()}")
+        Logger.info("Requests to '/' will return 404")
+    else:
+        Logger.success(f"Found index.html: {index_file.absolute()}")
+    
+    return True
 
 
 def main():
     """Master process - spawns workers"""
-    global manager, stats_dict
     
     print_banner()
     print_architecture()
     print_endpoints()
     
-    # Initialize shared statistics
-    # ⚠️ NOTE: Manager.dict() uses locks internally, but ONLY for stats
-    # Not in request hot path - acceptable tradeoff
-    # `multiprocessing.Manager()` creates a **separate server process** that manages 
-    # **shared objects** that ALL processes can access.
-    manager = multiprocessing.Manager()
-    stats_dict = manager.dict()
-    stats_dict['total_requests'] = 0
-    stats_dict['total_bytes'] = 0
-    
-    # Create sample HTML
-    create_sample_html()
+    # Check static directory
+    if not check_static_directory():
+        return
     
     Logger.header("SERVER START")
     Logger.success(f"Listening on {Config.HOST}:{Config.PORT}")
@@ -1069,7 +1140,9 @@ def main():
     print()
     
     print(f"{Colors.BRIGHT_RED}Press Ctrl+C to stop{Colors.END}\n")
-    Logger.header("REQUEST LOG")
+    
+    if Config.ENABLE_REQUEST_LOGGING:
+        Logger.header("REQUEST LOG")
     
     # Spawn workers
     workers = []
@@ -1083,34 +1156,23 @@ def main():
     
     time.sleep(0.5)
     
-    # Monitor
+    # Monitor workers
     try:
         for p in workers:
             p.join()
     except KeyboardInterrupt:
-        print(f"\n\n{Colors.BRIGHT_YELLOW}Shutting down...{Colors.END}")
+        print(f"\n\n{Colors.BRIGHT_YELLOW}Shutting down...{Colors.END}\n")
         
+        # Graceful shutdown - let workers finish and print stats
         for p in workers:
             p.terminate()
         
+        # Wait for workers to finish (they'll print their stats)
         for p in workers:
             p.join(timeout=5)
             if p.is_alive():
+                Logger.warning(f"Force killing worker (PID: {p.pid})")
                 p.kill()
-        
-        # Final stats
-        Logger.header("STATISTICS")
-        total_req = stats_dict.get('total_requests', 0)
-        total_bytes = stats_dict.get('total_bytes', 0)
-        
-        Logger.info(f"Total Requests: {total_req:,}")
-        
-        if total_bytes < 1024 * 1024:
-            Logger.info(f"Total Data: {total_bytes/1024:.2f} KB")
-        elif total_bytes < 1024 * 1024 * 1024:
-            Logger.info(f"Total Data: {total_bytes/(1024*1024):.2f} MB")
-        else:
-            Logger.info(f"Total Data: {total_bytes/(1024*1024*1024):.2f} GB")
     
     print(f"\n{Colors.BRIGHT_GREEN}Server stopped{Colors.END}\n")
 
