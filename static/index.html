@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building a 100K+ RPS Python Web Server</title>
+    <title>High-Performance Web Server</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
         * {
             margin: 0;
             padding: 0;
@@ -12,1539 +14,840 @@
         }
 
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1e40af;
-            --secondary: #10b981;
-            --danger: #ef4444;
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --accent: #06b6d4;
+            --success: #10b981;
             --warning: #f59e0b;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --code-bg: #1e293b;
-            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --dark: #0f172a;
+            --gray: #64748b;
+            --light: #f1f5f9;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
+            font-family: 'Poppins', sans-serif;
             color: var(--dark);
             background: var(--light);
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 30px;
+            overflow-x: hidden;
         }
 
         /* Hero Section */
         .hero {
-            background: var(--gradient);
-            color: white;
-            padding: 80px 20px;
-            text-align: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
         }
 
         .hero::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" stroke-opacity="0.1" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: moveGrid 20s linear infinite;
+        }
+
+        @keyframes moveGrid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(100px);
             opacity: 0.3;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .glow-1 {
+            background: rgba(99, 102, 241, 0.5);
+            top: 10%;
+            left: 10%;
+        }
+
+        .glow-2 {
+            background: rgba(139, 92, 246, 0.5);
+            bottom: 10%;
+            right: 10%;
+            animation-delay: 2s;
+        }
+
+        .glow-3 {
+            background: rgba(6, 182, 212, 0.5);
+            top: 50%;
+            left: 50%;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, 30px) scale(1.1); }
         }
 
         .hero-content {
             position: relative;
-            z-index: 1;
+            z-index: 10;
+            text-align: center;
+            color: white;
+            max-width: 1200px;
+            padding: 0 40px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .hero h1 {
-            font-size: 3.5em;
-            margin-bottom: 20px;
-            font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 5em;
+            font-weight: 800;
+            margin-bottom: 30px;
+            letter-spacing: -2px;
+            line-height: 1.1;
+            text-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
 
-        .hero .subtitle {
-            font-size: 1.5em;
-            margin-bottom: 15px;
+        .hero-subtitle {
+            font-size: 2em;
+            font-weight: 400;
+            margin-bottom: 25px;
             opacity: 0.95;
         }
 
-        .hero .description {
-            font-size: 1.1em;
+        .hero-description {
+            font-size: 1.25em;
+            font-weight: 300;
+            max-width: 800px;
+            margin: 0 auto 40px;
             opacity: 0.9;
-            max-width: 900px;
+            line-height: 1.8;
+        }
+
+        /* Section Styles */
+        section {
+            padding: 100px 40px;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1400px;
             margin: 0 auto;
         }
 
-        /* Section Styling */
-        section {
-            padding: 80px 20px;
-        }
-
-        section:nth-child(even) {
-            background: white;
-        }
-
         section h2 {
-            font-size: 2.8em;
-            margin-bottom: 15px;
-            text-align: center;
-            color: var(--primary);
+            font-size: 3.5em;
             font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        section .section-subtitle {
+        .section-subtitle {
             text-align: center;
             font-size: 1.3em;
-            color: #6b7280;
-            margin-bottom: 60px;
-            max-width: 900px;
+            color: var(--gray);
+            margin-bottom: 80px;
+            max-width: 800px;
             margin-left: auto;
             margin-right: auto;
         }
 
-        /* Row-based Problem/Solution Cards */
-        .row-card {
+        /* Problem Categories */
+        .problem-category {
+            margin-bottom: 100px;
+        }
+
+        .category-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .category-header h3 {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 15px;
+        }
+
+        .category-header p {
+            font-size: 1.2em;
+            color: var(--gray);
+        }
+
+        .problems-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .problem-card {
             background: white;
             padding: 40px;
-            margin-bottom: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-left: 6px solid var(--danger);
-            transition: transform 0.3s, box-shadow 0.3s;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-top: 4px solid var(--warning);
         }
 
-        .row-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        .problem-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
         }
 
-        .row-card.solution {
-            border-left-color: var(--secondary);
-        }
-
-        .row-card-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 25px;
-            gap: 20px;
-        }
-
-        .row-card-icon {
-            font-size: 3.5em;
-            flex-shrink: 0;
-        }
-
-        .row-card-title {
-            flex: 1;
-        }
-
-        .row-card-title h3 {
-            font-size: 2em;
+        .problem-card h4 {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
             color: var(--dark);
-            margin-bottom: 8px;
         }
 
-        .row-card-title .subtitle {
-            font-size: 1.1em;
-            color: #6b7280;
-            font-weight: 500;
+        .problem-card p {
+            color: var(--gray);
+            line-height: 1.8;
+            margin-bottom: 20px;
         }
 
-        .row-card-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-top: 30px;
+        .problem-card ul {
+            list-style: none;
         }
 
-        .row-card-section h4 {
-            font-size: 1.3em;
-            color: var(--primary);
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .row-card-section ul {
-            margin-left: 20px;
-            margin-top: 10px;
-        }
-
-        .row-card-section li {
-            margin: 8px 0;
-            color: #4b5563;
+        .problem-card li {
+            padding-left: 25px;
+            position: relative;
+            margin-bottom: 12px;
+            color: var(--gray);
             line-height: 1.7;
         }
 
-        .row-card-section li strong {
+        .problem-card li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--warning);
+            font-weight: 700;
+        }
+
+        /* Solution Section */
+        .solution-hero {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 80px 40px;
+            border-radius: 30px;
+            color: white;
+            text-align: center;
+            margin: 80px 0;
+        }
+
+        .solution-hero h3 {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .solution-hero p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .solutions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .solution-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-top: 4px solid var(--success);
+        }
+
+        .solution-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .solution-card h4 {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
             color: var(--dark);
         }
 
-        /* Code Blocks */
-        .code-block {
-            background: var(--code-bg);
-            color: #e2e8f0;
-            padding: 25px;
-            border-radius: 8px;
-            margin: 20px 0;
-            overflow-x: auto;
+        .solution-card p {
+            color: var(--gray);
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .solution-card ul {
+            list-style: none;
+        }
+
+        .solution-card li {
+            padding-left: 25px;
             position: relative;
-            font-size: 0.95em;
+            margin-bottom: 12px;
+            color: var(--gray);
+            line-height: 1.7;
         }
 
-        .code-block::before {
-            content: attr(data-lang);
+        .solution-card li::before {
+            content: '✓';
             position: absolute;
-            top: 8px;
-            right: 15px;
-            font-size: 0.75em;
-            color: #94a3b8;
-            text-transform: uppercase;
-            font-weight: 600;
+            left: 0;
+            color: var(--success);
+            font-weight: 700;
         }
 
-        .code-block code {
-            font-family: 'Courier New', monospace;
-            line-height: 1.6;
+        /* Architecture Diagram */
+        .arch-section {
+            background: white;
+            padding: 80px 40px;
+            margin: 80px 0;
+            border-radius: 30px;
         }
 
-        .keyword { color: #c678dd; }
-        .string { color: #98c379; }
-        .comment { color: #5c6370; font-style: italic; }
-        .function { color: #61afef; }
-        .number { color: #d19a66; }
-
-        /* Benefit Box */
-        .benefit-box {
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-            padding: 20px 25px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border-left: 4px solid var(--secondary);
-        }
-
-        .benefit-box h5 {
-            color: var(--secondary);
-            font-size: 1.2em;
-            margin-bottom: 10px;
-        }
-
-        .benefit-box ul {
-            margin-left: 20px;
-        }
-
-        .benefit-box li {
-            color: #065f46;
-            margin: 5px 0;
-        }
-
-        /* Architecture Flow Diagrams */
-        .architecture-comparison {
+        .arch-comparison {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-top: 50px;
+            gap: 50px;
+            margin-top: 60px;
+        }
+
+        .arch-box {
+            background: var(--light);
+            padding: 40px;
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .arch-box h4 {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-align: center;
         }
 
         .arch-diagram {
-            background: white;
-            padding: 35px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .arch-diagram.problem {
-            border: 3px solid var(--danger);
-        }
-
-        .arch-diagram.solution {
-            border: 3px solid var(--secondary);
-        }
-
-        .arch-diagram h3 {
-            text-align: center;
-            font-size: 1.8em;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .arch-diagram.problem h3 {
-            color: var(--danger);
-        }
-
-        .arch-diagram.solution h3 {
-            color: var(--secondary);
-        }
-
-        .arch-diagram pre {
-            background: var(--code-bg);
+            background: var(--dark);
+            padding: 40px;
+            border-radius: 15px;
             color: #e2e8f0;
-            padding: 25px;
-            border-radius: 8px;
-            overflow-x: auto;
+            font-family: 'Courier New', monospace;
             font-size: 0.85em;
-            line-height: 1.5;
+            line-height: 1.7;
+            white-space: pre;
+            overflow-x: auto;
+            margin-bottom: 30px;
         }
 
-        .arch-stats {
-            margin-top: 20px;
-            padding: 20px;
-            background: #f9fafb;
-            border-radius: 8px;
+        .arch-highlights {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
         }
 
-        .arch-stats h4 {
-            font-size: 1.2em;
-            margin-bottom: 12px;
-            color: var(--dark);
+        .highlight-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
         }
 
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e5e7eb;
+        .highlight-label {
+            font-size: 0.85em;
+            color: var(--gray);
+            margin-bottom: 5px;
         }
 
-        .stat-row:last-child {
-            border-bottom: none;
-        }
-
-        .stat-label {
-            color: #6b7280;
-            font-weight: 500;
-        }
-
-        .stat-value {
+        .highlight-value {
+            font-size: 1.4em;
             font-weight: 700;
+        }
+
+        .highlight-value.good {
+            color: var(--success);
+        }
+
+        .highlight-value.bad {
+            color: var(--warning);
+        }
+
+        /* Key Points */
+        .key-points {
+            background: linear-gradient(135deg, #f0f9ff, #e0e7ff);
+            padding: 60px 40px;
+            border-radius: 30px;
+            margin: 80px 0;
+        }
+
+        .key-points h3 {
+            font-size: 2.5em;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 50px;
             color: var(--dark);
         }
 
-        .stat-value.good {
-            color: var(--secondary);
+        .points-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
         }
 
-        .stat-value.bad {
-            color: var(--danger);
+        .point-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        .point-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .point-card h5 {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+
+        .point-card p {
+            color: var(--gray);
+            line-height: 1.7;
+        }
+
+        /* Results Image Section */
+        .results-section {
+            text-align: center;
+            padding: 100px 40px;
+            background: white;
+        }
+
+        .results-image-container {
+            max-width: 1200px;
+            margin: 60px auto 0;
+            background: var(--light);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        }
+
+        .results-image-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
 
         /* Responsive */
-        @media (max-width: 1024px) {
-            .architecture-comparison {
-                grid-template-columns: 1fr;
-            }
-
-            .row-card-content {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 968px) {
+            .hero h1 { font-size: 3em; }
+            .hero-subtitle { font-size: 1.5em; }
+            .arch-comparison { grid-template-columns: 1fr; }
+            .problems-grid { grid-template-columns: 1fr; }
+            .solutions-grid { grid-template-columns: 1fr; }
+            section { padding: 60px 20px; }
         }
 
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.2em;
-            }
-
-            .hero .subtitle {
-                font-size: 1.2em;
-            }
-
-            section h2 {
-                font-size: 2em;
-            }
-
-            .row-card {
-                padding: 25px;
-            }
-
-            .row-card-title h3 {
-                font-size: 1.5em;
-            }
-
-            .row-card-icon {
-                font-size: 2.5em;
-            }
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 2.2em; }
         }
 
-        /* Visual Separator */
-        .section-separator {
-            text-align: center;
-            margin: 60px 0;
-            position: relative;
+        html {
+            scroll-behavior: smooth;
         }
 
-        .section-separator::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #cbd5e1, transparent);
+        /* Scroll Animation */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
         }
 
-        .section-separator span {
-            background: var(--light);
-            padding: 10px 30px;
-            position: relative;
-            z-index: 1;
-            font-size: 1.5em;
-            color: #6b7280;
-            font-weight: 600;
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
 <body>
     <!-- Hero Section -->
-    <div class="hero">
-        <div class="hero-content container">
-            <h1>🚀 Building a 100K+ RPS Web Server in Python</h1>
-            <p class="subtitle">Understanding the Problems, Challenges, and Solutions</p>
-            <p class="description">
-                A deep dive into the fundamental bottlenecks of traditional web servers,
-                the unique challenges of Python, and the architectural solutions that enable
-                100,000+ requests per second on commodity hardware.
+    <section class="hero">
+        <div class="hero-glow glow-1"></div>
+        <div class="hero-glow glow-2"></div>
+        <div class="hero-glow glow-3"></div>
+        
+        <div class="hero-content">
+            <h1>High-Performance Web Server</h1>
+            <p class="hero-subtitle">Scaling to 100,000+ Requests Per Second</p>
+            <p class="hero-description">
+                Web server built to handle extreme load using advanced 
+                architectural patterns including event-driven I/O, multi-process concurrency, 
+                and zero-copy file transfers
             </p>
         </div>
-    </div>
+    </section>
 
-    <!-- Global Server Problems Section -->
-    <section id="global-problems">
+    <!-- Traditional Server Problems -->
+    <section>
         <div class="container">
-            <h2>🌍 Global Web Server Problems</h2>
+            <h2>The Challenge</h2>
             <p class="section-subtitle">
-                These are fundamental bottlenecks that affect all web servers, regardless of language or framework.
+                Understanding the fundamental limitations that prevent traditional servers from handling 100K+ RPS
             </p>
 
-            <!-- Problem 1: Thread-per-Request -->
-            <div class="row-card">
-                <div class="row-card-header">
-                    <div class="row-card-icon">🧵</div>
-                    <div class="row-card-title">
-                        <h3>Thread-Per-Request Model</h3>
-                        <p class="subtitle">Creating a thread for every request doesn't scale</p>
-                    </div>
+            <div class="problem-category fade-in">
+                <div class="category-header">
+                    <h3>Traditional Web Server Limitations</h3>
+                    <p>Core architectural issues affecting all web servers</p>
                 </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>❌ The Problem</h4>
-                        <ul>
-                            <li><strong>Memory overhead:</strong> Each thread consumes ~8MB of RAM</li>
-                            <li><strong>At 10K connections:</strong> 80GB of memory required</li>
-                            <li><strong>Context switching:</strong> CPU wastes time switching between threads</li>
-                            <li><strong>OS limits:</strong> Maximum threads per process (typically 1K-10K)</li>
-                            <li><strong>Creation overhead:</strong> Thread creation/destruction is expensive</li>
-                        </ul>
-                        <div class="code-block" data-lang="Traditional">
-<code><span class="comment"># Traditional blocking model</span>
-<span class="keyword">def</span> <span class="function">handle_request</span>(request):
-    thread = Thread(target=process_request)
-    thread.start()  <span class="comment"># New thread per request!</span>
-    thread.join()
-    
-<span class="comment"># At 10K concurrent requests:</span>
-<span class="comment"># - 10,000 threads</span>
-<span class="comment"># - 80 GB RAM</span>
-<span class="comment"># - High context switching</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>📊 Impact at Scale</h4>
-                        <ul>
-                            <li><strong>1K concurrent:</strong> 8GB RAM, manageable but inefficient</li>
-                            <li><strong>10K concurrent:</strong> 80GB RAM, severe degradation</li>
-                            <li><strong>100K concurrent:</strong> 800GB RAM, impossible on most hardware</li>
-                            <li><strong>Context switches:</strong> 100K+ per second → CPU thrashing</li>
-                            <li><strong>Result:</strong> Server crashes or becomes unresponsive</li>
-                        </ul>
-                        <div class="code-block" data-lang="Resource Usage">
-<code>Threads: 10,000
-Memory: 80 GB (10K × 8MB)
-Context Switches: 150,000/sec
-CPU Time Wasted: 60%
-Status: <span class="string">OVERLOADED</span>
 
-<span class="comment"># Server behavior:</span>
-Response Time: 2s → 10s → 60s
-Error Rate: 0% → 5% → 50%
-Throughput: Collapses
-</code>
-                        </div>
+                <div class="problems-grid">
+                    <div class="problem-card">
+                        <h4>Thread-Per-Request Model</h4>
+                        <p>Creating a dedicated thread for each connection doesn't scale.</p>
+                        <ul>
+                            <li>8MB memory per thread</li>
+                            <li>100K connections = 800GB RAM required</li>
+                            <li>Massive context switching overhead</li>
+                            <li>OS thread limits (10K-30K maximum)</li>
+                        </ul>
+                    </div>
+
+                    <div class="problem-card">
+                        <h4>Blocking I/O Operations</h4>
+                        <p>Threads spend most time waiting, not working.</p>
+                        <ul>
+                            <li>Threads idle 90% of the time</li>
+                            <li>Wait for network data to arrive</li>
+                            <li>Wait for socket buffers to free up</li>
+                            <li>Wasted CPU and memory resources</li>
+                        </ul>
+                    </div>
+
+                    <div class="problem-card">
+                        <h4>Memory Copy Overhead</h4>
+                        <p>File data copied multiple times unnecessarily.</p>
+                        <ul>
+                            <li>Disk → Kernel → User → Kernel → Network</li>
+                            <li>Two CPU-driven memory copies</li>
+                            <li>40% of CPU wasted on copying</li>
+                            <li>High memory bandwidth consumption</li>
+                        </ul>
+                    </div>
+
+                    <div class="problem-card">
+                        <h4>Resource Exhaustion</h4>
+                        <p>Unlimited connections lead to server crashes.</p>
+                        <ul>
+                            <li>File descriptor limits exceeded</li>
+                            <li>Out-of-memory conditions</li>
+                            <li>Degraded performance under load</li>
+                            <li>Cascading failures during spikes</li>
+                        </ul>
                     </div>
                 </div>
             </div>
 
-            <!-- Problem 2: Synchronous Blocking I/O -->
-            <div class="row-card">
-                <div class="row-card-header">
-                    <div class="row-card-icon">⏳</div>
-                    <div class="row-card-title">
-                        <h3>Synchronous Blocking I/O</h3>
-                        <p class="subtitle">Threads waste time waiting for I/O operations</p>
-                    </div>
+            <div class="problem-category fade-in">
+                <div class="category-header">
+                    <h3>Python-Specific Challenges</h3>
+                    <p>Additional hurdles when building high-performance servers in Python</p>
                 </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>❌ The Problem</h4>
+
+                <div class="problems-grid">
+                    <div class="problem-card">
+                        <h4>Global Interpreter Lock (GIL)</h4>
+                        <p>Python's most significant concurrency bottleneck.</p>
                         <ul>
-                            <li><strong>Blocking reads:</strong> Thread waits for network data</li>
-                            <li><strong>Blocking writes:</strong> Thread waits for socket buffer space</li>
-                            <li><strong>Blocking file I/O:</strong> Thread waits for disk operations</li>
-                            <li><strong>Database queries:</strong> Thread waits for database response</li>
-                            <li><strong>Wasted CPU:</strong> Thread does nothing while waiting</li>
+                            <li>Only one thread executes Python code at a time</li>
+                            <li>Multi-threading ≠ true parallelism</li>
+                            <li>On 8-core CPU, only 1 core utilized (12.5%)</li>
+                            <li>Adding cores provides zero benefit</li>
                         </ul>
-                        <div class="code-block" data-lang="Blocking">
-<code><span class="keyword">def</span> <span class="function">handle_request</span>(sock):
-    <span class="comment"># Thread BLOCKS here (waits for data)</span>
-    data = sock.recv(<span class="number">1024</span>)  
-    
-    <span class="comment"># Thread BLOCKS here (waits for DB)</span>
-    result = database.query(data)
-    
-    <span class="comment"># Thread BLOCKS here (waits for socket)</span>
-    sock.send(result)
-    
-<span class="comment"># 90% of time: WAITING (wasting thread)</span>
-<span class="comment"># 10% of time: PROCESSING</span>
-</code>
-                        </div>
                     </div>
-                    <div class="row-card-section">
-                        <h4>⏱️ Time Breakdown</h4>
+
+                    <div class="problem-card">
+                        <h4>Default Event Loop Performance</h4>
+                        <p>Pure Python asyncio implementation is relatively slow.</p>
                         <ul>
-                            <li><strong>Network I/O wait:</strong> 60% of request time</li>
-                            <li><strong>Database wait:</strong> 25% of request time</li>
-                            <li><strong>Disk I/O wait:</strong> 10% of request time</li>
-                            <li><strong>Actual processing:</strong> Only 5% of request time</li>
-                            <li><strong>Thread utilization:</strong> 95% wasted on waiting</li>
+                            <li>Implemented in interpreted Python</li>
+                            <li>Slower than compiled alternatives</li>
+                            <li>Limited throughput per worker</li>
+                            <li>Needs optimized replacement (uvloop)</li>
                         </ul>
-                        <div class="code-block" data-lang="Timeline">
-<code><span class="comment">Request Timeline (100ms total):</span>
-
-0ms   ────┐
-          │ Read request
-10ms  ────┘ <span class="comment">(10ms blocking)</span>
-          
-10ms  ────┐
-          │ Query database
-70ms  ────┘ <span class="comment">(60ms blocking!)</span>
-          
-70ms  ────┐
-          │ Process data
-75ms  ────┘ <span class="comment">(5ms actual work)</span>
-          
-75ms  ────┐
-          │ Send response
-100ms ────┘ <span class="comment">(25ms blocking)</span>
-
-<span class="string">Efficiency: 5% (95% wasted!)</span>
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Problem 3: Memory Copies -->
-            <div class="row-card">
-                <div class="row-card-header">
-                    <div class="row-card-icon">📁</div>
-                    <div class="row-card-title">
-                        <h3>Excessive Memory Copies</h3>
-                        <p class="subtitle">Data copied multiple times between kernel and user space</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>❌ The Problem</h4>
-                        <ul>
-                            <li><strong>Copy #1:</strong> Disk → Kernel buffer (DMA)</li>
-                            <li><strong>Copy #2:</strong> Kernel → User space (read() syscall)</li>
-                            <li><strong>Copy #3:</strong> User space → Kernel socket buffer (write() syscall)</li>
-                            <li><strong>Copy #4:</strong> Socket buffer → Network card (DMA)</li>
-                            <li><strong>CPU overhead:</strong> 40% wasted on copying data</li>
-                        </ul>
-                        <div class="code-block" data-lang="Traditional Path">
-<code>[Disk] → [Kernel Page Cache] → [User Buffer] → [Socket Buffer] → [Network]
-         ↓ DMA              ↓ CPU Copy      ↓ CPU Copy    ↓ DMA
-
-<span class="comment"># For a 1MB file:</span>
-DMA transfers: <span class="number">2</span>   <span class="comment">(efficient)</span>
-CPU copies:    <span class="number">2</span>   <span class="comment">(wasteful!)</span>
-Data moved:    <span class="number">4</span>MB <span class="comment">(1MB × 4 copies)</span>
-
-<span class="comment"># At 1K files/sec:</span>
-CPU time: <span class="number">40</span>% just copying data
-Memory bandwidth: Saturated
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>💾 System Calls Required</h4>
-                        <ul>
-                            <li><strong>open():</strong> Open file (context switch to kernel)</li>
-                            <li><strong>read():</strong> Read data into user space (copy + context switch)</li>
-                            <li><strong>write():</strong> Write to socket (copy + context switch)</li>
-                            <li><strong>close():</strong> Close file (context switch)</li>
-                            <li><strong>Total:</strong> 4 context switches per file transfer</li>
-                        </ul>
-                        <div class="code-block" data-lang="System Calls">
-<code><span class="keyword">def</span> <span class="function">send_file_traditional</span>(socket, filepath):
-    fd = open(filepath, <span class="string">'rb'</span>)      <span class="comment"># syscall 1</span>
-    <span class="keyword">while</span> <span class="number">True</span>:
-        data = fd.read(<span class="number">4096</span>)        <span class="comment"># syscall 2 (many times)</span>
-        <span class="keyword">if not</span> data:
-            <span class="keyword">break</span>
-        socket.write(data)           <span class="comment"># syscall 3 (many times)</span>
-    fd.close()                       <span class="comment"># syscall 4</span>
-
-<span class="comment"># For 1MB file (256 × 4KB chunks):</span>
-<span class="comment"># - 258 context switches (256 reads + 256 writes + 2)</span>
-<span class="comment"># - 2MB of memory copies</span>
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Problem 4: Shared State Synchronization -->
-            <div class="row-card">
-                <div class="row-card-header">
-                    <div class="row-card-icon">🔐</div>
-                    <div class="row-card-title">
-                        <h3>Shared State & Locks</h3>
-                        <p class="subtitle">Locks serialize access, eliminating parallelism</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>❌ The Problem</h4>
-                        <ul>
-                            <li><strong>Lock contention:</strong> Threads wait for locks</li>
-                            <li><strong>Serialization:</strong> Only one thread accesses shared data</li>
-                            <li><strong>Cache invalidation:</strong> Lock ownership moves between cores</li>
-                            <li><strong>Priority inversion:</strong> High-priority threads wait for low-priority</li>
-                            <li><strong>Deadlocks:</strong> Circular lock dependencies freeze server</li>
-                        </ul>
-                        <div class="code-block" data-lang="Locks">
-<code><span class="comment"># Global shared statistics</span>
-stats_lock = Lock()
-global_stats = {<span class="string">'requests'</span>: <span class="number">0</span>, <span class="string">'errors'</span>: <span class="number">0</span>}
-
-<span class="keyword">def</span> <span class="function">handle_request</span>():
-    <span class="comment"># Every request waits here</span>
-    <span class="keyword">with</span> stats_lock:  
-        global_stats[<span class="string">'requests'</span>] += <span class="number">1</span>
-    
-    <span class="comment"># Process request...</span>
-    
-    <span class="keyword">with</span> stats_lock:
-        global_stats[<span class="string">'errors'</span>] += <span class="number">1</span>
-
-<span class="comment"># With 8 threads:</span>
-<span class="comment"># - Only 1 can update stats at a time</span>
-<span class="comment"># - Other 7 wait (wasted cores)</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>📉 Performance Degradation</h4>
-                        <ul>
-                            <li><strong>1 thread:</strong> 100% efficiency (no contention)</li>
-                            <li><strong>2 threads:</strong> 85% efficiency (some waiting)</li>
-                            <li><strong>4 threads:</strong> 60% efficiency (frequent contention)</li>
-                            <li><strong>8 threads:</strong> 30% efficiency (constant contention)</li>
-                            <li><strong>Result:</strong> Adding cores makes it slower!</li>
-                        </ul>
-                        <div class="code-block" data-lang="Scalability">
-<code><span class="comment">Performance vs CPU Cores:</span>
-
-<span class="number">1</span> core:  15,000 req/sec  (baseline)
-<span class="number">2</span> cores: 25,000 req/sec  (<span class="number">83</span>% efficiency)
-<span class="number">4</span> cores: 36,000 req/sec  (<span class="number">60</span>% efficiency)
-<span class="number">8</span> cores: 36,000 req/sec  (<span class="number">30</span>% efficiency)
-
-<span class="comment"># Lock contention grows with cores:</span>
-<span class="comment"># More threads → More contention</span>
-<span class="comment"># → Less parallelism</span>
-<span class="comment"># → Diminishing returns</span>
-
-<span class="string">Expected: 8× performance</span>
-<span class="danger">Actual:   2.4× performance</span>
-</code>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <div class="section-separator">
-        <span>⚠️ Python-Specific Challenges</span>
+    <!-- Solution Hero -->
+    <div class="container">
+        <div class="solution-hero fade-in">
+            <h3>The Solution</h3>
+            <p>Four architectural innovations working together to achieve 100K+ requests per second</p>
+        </div>
     </div>
 
-    <!-- Python-Specific Challenges Section -->
-    <section id="python-challenges">
+    <!-- Solutions -->
+    <section>
         <div class="container">
-            <h2>🐍 Python Web Server Challenges</h2>
-            <p class="section-subtitle">
-                Beyond universal server problems, Python has unique challenges that make high performance difficult.
-            </p>
-
-            <!-- Challenge 1: GIL -->
-            <div class="row-card">
-                <div class="row-card-header">
-                    <div class="row-card-icon">🔒</div>
-                    <div class="row-card-title">
-                        <h3>The Global Interpreter Lock (GIL)</h3>
-                        <p class="subtitle">Python's biggest concurrency bottleneck</p>
-                    </div>
+            <div class="solutions-grid fade-in">
+                <div class="solution-card">
+                    <h4>1. Event-Driven I/O</h4>
+                    <p>Single-threaded event loop handles thousands of connections efficiently.</p>
+                    <ul>
+                        <li>epoll (Linux) / IOCP (Windows) for O(1) socket monitoring</li>
+                        <li>10KB per connection vs 8MB per thread</li>
+                        <li>Zero context switching overhead</li>
+                        <li>1000+ concurrent connections per thread</li>
+                    </ul>
                 </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>❌ The Problem</h4>
-                        <ul>
-                            <li><strong>Single execution:</strong> Only ONE thread runs Python code at a time</li>
-                            <li><strong>Wasted cores:</strong> 8-core CPU performs like single-core</li>
-                            <li><strong>Thread fighting:</strong> Threads constantly acquire/release GIL</li>
-                            <li><strong>No parallelism:</strong> Multi-threading ≠ concurrent execution</li>
-                            <li><strong>Performance ceiling:</strong> Can't exceed single-thread performance</li>
-                        </ul>
-                        <div class="code-block" data-lang="GIL Behavior">
-<code><span class="comment"># 8 threads, 8-core CPU</span>
-Thread <span class="number">1</span>: [<span class="string">████</span>░░░░░░] executing (has GIL)
-Thread <span class="number">2</span>: [░░░░░░░░░░] waiting for GIL...
-Thread <span class="number">3</span>: [░░░░░░░░░░] waiting for GIL...
-Thread <span class="number">4</span>: [░░░░░░░░░░] waiting for GIL...
-Thread <span class="number">5</span>: [░░░░░░░░░░] waiting for GIL...
-Thread <span class="number">6</span>: [░░░░░░░░░░] waiting for GIL...
-Thread <span class="number">7</span>: [░░░░░░░░░░] waiting for GIL...
-Thread <span class="number">8</span>: [░░░░░░░░░░] waiting for GIL...
 
-<span class="comment"># Only 1 thread runs Python code at any moment!</span>
-<span class="comment"># 7 CPU cores sitting idle</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>📊 Impact on Throughput</h4>
-                        <ul>
-                            <li><strong>1 thread:</strong> 15,000 req/sec (baseline)</li>
-                            <li><strong>8 threads:</strong> 15,000 req/sec (no improvement!)</li>
-                            <li><strong>GIL overhead:</strong> Actually slower due to lock contention</li>
-                            <li><strong>CPU utilization:</strong> 12.5% (1 core out of 8)</li>
-                            <li><strong>Typical multi-threaded Python:</strong> 5K-20K req/sec max</li>
-                        </ul>
-                        <div class="code-block" data-lang="Benchmark">
-<code><span class="comment"># Flask + Gunicorn (multi-threaded)</span>
-Threads: <span class="number">8</span>
-CPU Cores: <span class="number">8</span>
-
-Results:
-  Throughput: <span class="number">5,000</span> req/sec
-  CPU Usage: <span class="number">12</span>%  <span class="comment">(1 core active)</span>
-  
-  Expected (no GIL): <span class="number">120,000</span> req/sec
-  Actual (with GIL): <span class="number">5,000</span> req/sec
-  
-  <span class="danger">Performance Loss: 96%!</span>
-</code>
-                        </div>
-                    </div>
+                <div class="solution-card">
+                    <h4>2. Multi-Process Architecture</h4>
+                    <p>Bypass the GIL by running independent processes per CPU core.</p>
+                    <ul>
+                        <li>Each process has its own GIL - no contention</li>
+                        <li>SO_REUSEPORT for kernel load balancing</li>
+                        <li>True parallel processing across all cores</li>
+                        <li>Linear scaling: 8 cores = 8× throughput</li>
+                    </ul>
                 </div>
-            </div>
 
-            <!-- Challenge 2: Slow I/O -->
-            <div class="row-card">
-                <div class="row-card-header">
-                    <div class="row-card-icon">🐌</div>
-                    <div class="row-card-title">
-                        <h3>Default Synchronous I/O</h3>
-                        <p class="subtitle">Standard library uses blocking I/O operations</p>
-                    </div>
+                <div class="solution-card">
+                    <h4>3. Zero-Copy File Transfer</h4>
+                    <p>Transfer files from disk to network without user-space copies.</p>
+                    <ul>
+                        <li>sendfile() syscall for kernel-level transfer</li>
+                        <li>Direct path: Disk → Kernel → Network</li>
+                        <li>40% reduction in CPU usage</li>
+                        <li>Single syscall vs hundreds</li>
+                    </ul>
                 </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>❌ The Problem</h4>
-                        <ul>
-                            <li><strong>socket.recv():</strong> Blocks thread until data arrives</li>
-                            <li><strong>socket.send():</strong> Blocks until buffer has space</li>
-                            <li><strong>open()/read():</strong> Blocks during disk I/O</li>
-                            <li><strong>No async built-in:</strong> Must use asyncio (added in Python 3.4)</li>
-                            <li><strong>Legacy code:</strong> Most libraries still use blocking I/O</li>
-                        </ul>
-                        <div class="code-block" data-lang="Standard Library">
-<code><span class="keyword">import</span> socket
 
-<span class="comment"># Standard Python socket (blocking)</span>
-server = socket.socket()
-server.bind((<span class="string">'0.0.0.0'</span>, <span class="number">8080</span>))
-server.listen(<span class="number">100</span>)
-
-<span class="keyword">while</span> <span class="number">True</span>:
-    conn, addr = server.accept()  <span class="comment"># BLOCKS</span>
-    data = conn.recv(<span class="number">1024</span>)         <span class="comment"># BLOCKS</span>
-    result = process(data)
-    conn.send(result)              <span class="comment"># BLOCKS</span>
-    conn.close()
-
-<span class="comment"># Can only handle ONE request at a time!</span>
-<span class="comment"># Throughput: ~100 req/sec</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>🔄 asyncio Adoption Challenges</h4>
-                        <ul>
-                            <li><strong>Not default:</strong> asyncio is opt-in, not standard</li>
-                            <li><strong>Complex syntax:</strong> async/await confuses beginners</li>
-                            <li><strong>Event loop overhead:</strong> Pure Python event loop is slow</li>
-                            <li><strong>Library compatibility:</strong> Many libs don't support async</li>
-                            <li><strong>Learning curve:</strong> Different mental model from sync code</li>
-                        </ul>
-                        <div class="code-block" data-lang="asyncio Overhead">
-<code><span class="comment"># Python's default asyncio event loop</span>
-<span class="keyword">import</span> asyncio
-
-<span class="keyword">async def</span> <span class="function">handle</span>(reader, writer):
-    data = <span class="keyword">await</span> reader.read(<span class="number">1024</span>)
-    writer.write(response)
-    <span class="keyword">await</span> writer.drain()
-
-<span class="comment"># Performance:</span>
-<span class="comment"># - Default loop: 30K req/sec</span>
-<span class="comment"># - uvloop (C):   80K req/sec</span>
-<span class="comment"># Pure Python event loop is 2.5× slower!</span>
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Challenge 3: Interpreted Performance -->
-            <div class="row-card">
-                <div class="row-card-header">
-                    <div class="row-card-icon">⚙️</div>
-                    <div class="row-card-title">
-                        <h3>Interpreted Language Overhead</h3>
-                        <p class="subtitle">Python is slower than compiled languages</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>❌ The Problem</h4>
-                        <ul>
-                            <li><strong>Bytecode interpretation:</strong> Extra layer vs native code</li>
-                            <li><strong>Dynamic typing:</strong> Type checks at runtime</li>
-                            <li><strong>Object overhead:</strong> Everything is an object (memory cost)</li>
-                            <li><strong>No compiler optimization:</strong> Can't optimize like C/Rust</li>
-                            <li><strong>Slower parsing:</strong> String/regex operations less efficient</li>
-                        </ul>
-                        <div class="code-block" data-lang="Performance">
-<code><span class="comment"># Request parsing comparison (same algorithm)</span>
-
-C/Rust:     <span class="number">10</span> microseconds
-Go:         <span class="number">15</span> microseconds  
-Python:     <span class="number">300</span> microseconds <span class="comment">(30× slower!)</span>
-
-<span class="comment"># Why?</span>
-<span class="comment"># - Bytecode interpretation overhead</span>
-<span class="comment"># - Dynamic type checking</span>
-<span class="comment"># - Object allocation/deallocation</span>
-<span class="comment"># - No CPU instruction optimization</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>💾 Memory Overhead</h4>
-                        <ul>
-                            <li><strong>Object wrapper:</strong> Every value is a PyObject</li>
-                            <li><strong>Integer storage:</strong> Python int = 28 bytes (vs 4 bytes in C)</li>
-                            <li><strong>String storage:</strong> Extra metadata for unicode/encoding</li>
-                            <li><strong>List overhead:</strong> Dynamic arrays have extra bookkeeping</li>
-                            <li><strong>Result:</strong> 5-10× more memory than equivalent C code</li>
-                        </ul>
-                        <div class="code-block" data-lang="Memory">
-<code><span class="keyword">import</span> sys
-
-<span class="comment"># Memory size comparison</span>
-sys.getsizeof(<span class="number">42</span>)              <span class="comment"># 28 bytes</span>
-sys.getsizeof(<span class="string">"hello"</span>)         <span class="comment"># 54 bytes</span>
-sys.getsizeof([<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>])        <span class="comment"># 88 bytes</span>
-
-<span class="comment"># vs C:</span>
-<span class="comment"># int:    4 bytes</span>
-<span class="comment"># char*:  6 bytes (5 chars + null)</span>
-<span class="comment"># array:  12 bytes (3 × 4-byte ints)</span>
-
-<span class="comment"># Python uses 5-10× more memory!</span>
-</code>
-                        </div>
-                    </div>
+                <div class="solution-card">
+                    <h4>4. Connection Pool</h4>
+                    <p>Semaphore-based pooling prevents resource exhaustion.</p>
+                    <ul>
+                        <li>2000 slots per worker = bounded resources</li>
+                        <li>Graceful queuing when pool is full</li>
+                        <li>Predictable memory: 160MB maximum</li>
+                        <li>No crashes during traffic spikes</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </section>
 
-    <div class="section-separator">
-        <span>✅ Solutions & Optimizations</span>
-    </div>
+    <!-- Architecture Comparison -->
+    <div class="container">
+        <div class="arch-section fade-in">
+            <h2>Architecture Comparison</h2>
+            <p class="section-subtitle">Traditional vs Optimized Implementation</p>
 
-    <!-- Solutions Section -->
-    <section id="solutions">
-        <div class="container">
-            <h2>💡 Architectural Solutions</h2>
-            <p class="section-subtitle">
-                How this server solves each problem to achieve 100K+ requests per second in Python.
-            </p>
-
-            <!-- Solution 1: Event-Driven I/O -->
-            <div class="row-card solution">
-                <div class="row-card-header">
-                    <div class="row-card-icon">⚡</div>
-                    <div class="row-card-title">
-                        <h3>Solution: Event-Driven I/O (asyncio)</h3>
-                        <p class="subtitle">One thread handles thousands of concurrent connections</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>✅ How It Works</h4>
-                        <ul>
-                            <li><strong>Coroutines, not threads:</strong> Lightweight (10KB vs 8MB)</li>
-                            <li><strong>Event loop:</strong> epoll/IOCP for O(1) socket monitoring</li>
-                            <li><strong>Non-blocking I/O:</strong> Yield during waits, handle other requests</li>
-                            <li><strong>Kernel notification:</strong> OS tells us when sockets are ready</li>
-                            <li><strong>Single thread:</strong> No context switching overhead</li>
-                        </ul>
-                        <div class="code-block" data-lang="Async Solution">
-<code><span class="keyword">async def</span> <span class="function">handle_request</span>(reader, writer):
-    <span class="comment"># Doesn't block thread - yields to event loop</span>
-    data = <span class="keyword">await</span> reader.read(<span class="number">8192</span>)
-    
-    <span class="comment"># While waiting, event loop handles other requests</span>
-    <span class="comment"># No thread creation/destruction</span>
-    <span class="comment"># No context switching</span>
-    
-    writer.write(response)
-    <span class="keyword">await</span> writer.drain()
-
-<span class="comment"># One thread = 1,000+ concurrent connections!</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>🚀 Performance Impact</h4>
-                        <div class="benefit-box">
-                            <h5>Improvements</h5>
-                            <ul>
-                                <li><strong>Memory:</strong> 10KB per connection (vs 8MB per thread) = 800× less</li>
-                                <li><strong>Concurrency:</strong> 1,000+ connections per thread (vs 1 per thread)</li>
-                                <li><strong>Context switches:</strong> Near zero (vs 100K+ per second)</li>
-                                <li><strong>CPU efficiency:</strong> 95% (vs 5% with blocking threads)</li>
-                                <li><strong>Throughput:</strong> 30K req/sec per worker (vs 100 req/sec)</li>
-                            </ul>
-                        </div>
-                        <div class="code-block" data-lang="Results" style="margin-top: 15px;">
-<code><span class="comment">Single-threaded async server:</span>
-Concurrent Connections: <span class="number">1,000</span>
-Memory Usage: <span class="number">10</span> MB
-Throughput: <span class="number">30,000</span> req/sec
-
-<span class="comment">vs Traditional multi-threaded:</span>
-Concurrent Connections: <span class="number">100</span>
-Memory Usage: <span class="number">800</span> MB
-Throughput: <span class="number">2,000</span> req/sec
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Solution 2: Multi-Process -->
-            <div class="row-card solution">
-                <div class="row-card-header">
-                    <div class="row-card-icon">🔓</div>
-                    <div class="row-card-title">
-                        <h3>Solution: Multi-Process Architecture (GIL Bypass)</h3>
-                        <p class="subtitle">Each CPU core gets its own Python process and GIL</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>✅ How It Works</h4>
-                        <ul>
-                            <li><strong>Separate processes:</strong> N workers = N CPU cores</li>
-                            <li><strong>Independent GILs:</strong> Each process has its own GIL (no contention)</li>
-                            <li><strong>SO_REUSEPORT:</strong> Kernel load-balances connections across workers</li>
-                            <li><strong>No shared state:</strong> Each worker is completely independent</li>
-                            <li><strong>True parallelism:</strong> All cores execute Python code simultaneously</li>
-                        </ul>
-                        <div class="code-block" data-lang="Multi-Process">
-<code><span class="keyword">import</span> multiprocessing
-
-<span class="comment"># Spawn N workers (N = CPU cores)</span>
-<span class="keyword">for</span> i <span class="keyword">in</span> range(multiprocessing.cpu_count()):
-    p = Process(target=worker_process, args=(i,))
-    p.start()
-
-<span class="comment"># Each worker:</span>
-<span class="comment"># - Has its own event loop</span>
-<span class="comment"># - Has its own GIL (no contention!)</span>
-<span class="comment"># - Handles 30K req/sec</span>
-
-<span class="comment"># 8 workers × 30K = 240K req/sec theoretical</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>📈 Linear Scaling</h4>
-                        <div class="benefit-box">
-                            <h5>Improvements</h5>
-                            <ul>
-                                <li><strong>GIL contention:</strong> Zero (each process independent)</li>
-                                <li><strong>CPU utilization:</strong> 100% across all cores</li>
-                                <li><strong>Scaling:</strong> Linear (8 cores = 8× throughput)</li>
-                                <li><strong>Isolation:</strong> Worker crash doesn't affect others</li>
-                                <li><strong>Throughput:</strong> 15K req/sec × 8 cores = 120K req/sec</li>
-                            </ul>
-                        </div>
-                        <div class="code-block" data-lang="Scaling" style="margin-top: 15px;">
-<code><span class="comment">Performance vs CPU Cores:</span>
-
-<span class="number">1</span> worker:  <span class="number">15,000</span> req/sec
-<span class="number">2</span> workers: <span class="number">30,000</span> req/sec (<span class="number">100</span>% efficiency)
-<span class="number">4</span> workers: <span class="number">60,000</span> req/sec (<span class="number">100</span>% efficiency)
-<span class="number">8</span> workers: <span class="number">120,000</span> req/sec (<span class="number">100</span>% efficiency)
-
-<span class="string">Perfect linear scaling!</span>
-<span class="string">Each core contributes equally.</span>
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Solution 3: Zero-Copy -->
-            <div class="row-card solution">
-                <div class="row-card-header">
-                    <div class="row-card-icon">📤</div>
-                    <div class="row-card-title">
-                        <h3>Solution: Zero-Copy File Transfer (sendfile)</h3>
-                        <p class="subtitle">File data goes from disk to network without user-space copies</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>✅ How It Works</h4>
-                        <ul>
-                            <li><strong>sendfile() syscall:</strong> Kernel-level file transfer</li>
-                            <li><strong>DMA transfer:</strong> Disk → Kernel → Network (no user space)</li>
-                            <li><strong>No CPU copies:</strong> Data stays in kernel memory</li>
-                            <li><strong>Single syscall:</strong> Replaces open + read loop + write loop + close</li>
-                            <li><strong>Platform support:</strong> Linux (sendfile), Windows (TransmitFile)</li>
-                        </ul>
-                        <div class="code-block" data-lang="Zero-Copy">
-<code><span class="keyword">import</span> os
-
-<span class="keyword">async def</span> <span class="function">serve_file</span>(socket, filepath):
-    fd = os.open(filepath, os.O_RDONLY)
-    
-    <span class="comment"># sendfile: Disk → Network (kernel only!)</span>
-    <span class="keyword">await</span> loop.run_in_executor(
-        None,
-        os.sendfile,
-        socket.fileno(),  <span class="comment"># destination</span>
-        fd,               <span class="comment"># source</span>
-        offset,
-        count
-    )
-    
-    <span class="comment"># No data enters user space!</span>
-    <span class="comment"># No memory copies!</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>⚡ Efficiency Gains</h4>
-                        <div class="benefit-box">
-                            <h5>Improvements</h5>
-                            <ul>
-                                <li><strong>Memory copies:</strong> 0 in user space (vs 2 with traditional)</li>
-                                <li><strong>Context switches:</strong> 1 syscall (vs 258 for 1MB file)</li>
-                                <li><strong>CPU usage:</strong> 40% reduction for file serving</li>
-                                <li><strong>Memory bandwidth:</strong> 50% less pressure</li>
-                                <li><strong>Throughput:</strong> 2× faster file serving</li>
-                            </ul>
-                        </div>
-                        <div class="code-block" data-lang="Comparison" style="margin-top: 15px;">
-<code><span class="comment">Serving 1MB file (1000 times):</span>
-
-<span class="string">Traditional:</span>
-  Data copied: <span class="number">2,000</span> MB
-  Syscalls: <span class="number">258,000</span>
-  CPU time: <span class="number">2.5</span> sec
-
-<span class="string">Zero-Copy:</span>
-  Data copied: <span class="number">0</span> MB (user space)
-  Syscalls: <span class="number">1,000</span>
-  CPU time: <span class="number">1.5</span> sec
-
-<span class="string">Improvement: 40% faster!</span>
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Solution 4: Connection Pool -->
-            <div class="row-card solution">
-                <div class="row-card-header">
-                    <div class="row-card-icon">🎯</div>
-                    <div class="row-card-title">
-                        <h3>Solution: Connection Pool (Semaphore-Based)</h3>
-                        <p class="subtitle">Limit concurrent connections to prevent resource exhaustion</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>✅ How It Works</h4>
-                        <ul>
-                            <li><strong>Semaphore:</strong> 2,000 slots per worker (bounded concurrency)</li>
-                            <li><strong>FIFO queuing:</strong> Excess connections wait in order</li>
-                            <li><strong>Auto-release:</strong> Slot freed when request completes</li>
-                            <li><strong>Predictable memory:</strong> Max memory usage is known</li>
-                            <li><strong>Graceful degradation:</strong> Server slows but doesn't crash</li>
-                        </ul>
-                        <div class="code-block" data-lang="Pool">
-<code>semaphore = asyncio.Semaphore(<span class="number">2000</span>)
-
-<span class="keyword">async def</span> <span class="function">handle_connection</span>(reader, writer):
-    <span class="comment"># Acquire slot (wait if full)</span>
-    <span class="keyword">async with</span> semaphore:
-        <span class="comment"># Process request (bounded to 2000)</span>
-        <span class="keyword">await</span> process_request(reader, writer)
-    <span class="comment"># Slot auto-released here</span>
-
-<span class="comment"># Request 2001 waits until slot available</span>
-<span class="comment"># Memory: 2000 × 10KB = 20MB (predictable!)</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>🛡️ Protection</h4>
-                        <div class="benefit-box">
-                            <h5>Improvements</h5>
-                            <ul>
-                                <li><strong>Memory bounded:</strong> Max 20MB per worker (vs unbounded)</li>
-                                <li><strong>No crashes:</strong> Graceful queuing vs OOM kill</li>
-                                <li><strong>Fair queuing:</strong> FIFO ensures no starvation</li>
-                                <li><strong>Total capacity:</strong> 8 workers × 2000 = 16K concurrent</li>
-                                <li><strong>Predictable:</strong> Performance stays stable under overload</li>
-                            </ul>
-                        </div>
-                        <div class="code-block" data-lang="Capacity" style="margin-top: 15px;">
-<code><span class="comment">Under extreme load (50K concurrent):</span>
-
-<span class="string">Without pool:</span>
-  Connections: <span class="number">50,000</span>
-  Memory: <span class="number">500</span> MB
-  Status: <span class="danger">OOM CRASH</span>
-
-<span class="string">With pool (2K × 8 workers):</span>
-  Active: <span class="number">16,000</span>
-  Queued: <span class="number">34,000</span> (in kernel backlog)
-  Memory: <span class="number">160</span> MB
-  Status: <span class="string">STABLE (slower but alive)</span>
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Solution 5: Lock-Free -->
-            <div class="row-card solution">
-                <div class="row-card-header">
-                    <div class="row-card-icon">🚫</div>
-                    <div class="row-card-title">
-                        <h3>Solution: Lock-Free Architecture (No Shared State)</h3>
-                        <p class="subtitle">Each worker has isolated state - no locks needed</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>✅ How It Works</h4>
-                        <ul>
-                            <li><strong>Per-worker stats:</strong> Each process has its own statistics</li>
-                            <li><strong>No IPC:</strong> Zero inter-process communication</li>
-                            <li><strong>No locks:</strong> No synchronization primitives needed</li>
-                            <li><strong>Perfect locality:</strong> Data stays in local CPU cache</li>
-                            <li><strong>Aggregate on shutdown:</strong> Master collects stats when done</li>
-                        </ul>
-                        <div class="code-block" data-lang="Lock-Free">
-<code><span class="keyword">class</span> <span class="function">WorkerStats</span>:
-    <span class="keyword">def</span> <span class="function">__init__</span>(self, worker_id):
-        <span class="comment"># Each worker has its own instance</span>
-        self.worker_id = worker_id
-        self.requests = <span class="number">0</span>  <span class="comment"># Local only!</span>
-        self.errors = <span class="number">0</span>    <span class="comment"># No sharing!</span>
-    
-    <span class="keyword">def</span> <span class="function">record</span>(self, status):
-        <span class="comment"># No locks needed - completely isolated</span>
-        self.requests += <span class="number">1</span>
-        <span class="keyword">if</span> status >= <span class="number">400</span>:
-            self.errors += <span class="number">1</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>🚀 Scaling Benefits</h4>
-                        <div class="benefit-box">
-                            <h5>Improvements</h5>
-                            <ul>
-                                <li><strong>Lock contention:</strong> Zero (no shared state)</li>
-                                <li><strong>Cache coherency:</strong> Zero invalidations</li>
-                                <li><strong>Synchronization overhead:</strong> None</li>
-                                <li><strong>Scaling efficiency:</strong> 100% (perfect linear)</li>
-                                <li><strong>CPU efficiency:</strong> No time wasted on locks</li>
-                            </ul>
-                        </div>
-                        <div class="code-block" data-lang="Efficiency" style="margin-top: 15px;">
-<code><span class="comment">8-core performance:</span>
-
-<span class="string">With locks (shared state):</span>
-  Core efficiency: <span class="number">30</span>%
-  Total throughput: <span class="number">36,000</span> req/sec
-  
-<span class="string">Lock-free (isolated state):</span>
-  Core efficiency: <span class="number">100</span>%
-  Total throughput: <span class="number">120,000</span> req/sec
-  
-<span class="string">Improvement: 3.3× faster!</span>
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Solution 6: Optimized Parsing -->
-            <div class="row-card solution">
-                <div class="row-card-header">
-                    <div class="row-card-icon">⚙️</div>
-                    <div class="row-card-title">
-                        <h3>Solution: Optimized Request Parsing</h3>
-                        <p class="subtitle">Single-read parsing and batched writes minimize overhead</p>
-                    </div>
-                </div>
-                <div class="row-card-content">
-                    <div class="row-card-section">
-                        <h4>✅ How It Works</h4>
-                        <ul>
-                            <li><strong>Single read():</strong> Entire request in one async call (vs multiple readline())</li>
-                            <li><strong>In-memory parsing:</strong> Fast byte operations (find, slice)</li>
-                            <li><strong>Pre-compiled regex:</strong> Parse request line efficiently</li>
-                            <li><strong>Batched writes:</strong> Collect all data, drain once</li>
-                            <li><strong>Sampled stats:</strong> Record details every 100th request</li>
-                        </ul>
-                        <div class="code-block" data-lang="Optimized">
-<code><span class="comment"># Read entire request in ONE call</span>
-data = <span class="keyword">await</span> reader.read(<span class="number">8192</span>)
-
-<span class="comment"># Fast in-memory parsing (no more I/O)</span>
-first_newline = data.find(<span class="string">b'\r\n'</span>)
-request_line = data[:first_newline + <span class="number">2</span>]
-match = REGEX.match(request_line)
-
-<span class="comment"># Batch writes, single drain</span>
-writer.write(headers)
-writer.write(body)
-<span class="keyword">await</span> writer.drain()  <span class="comment"># Only one async call!</span>
-</code>
-                        </div>
-                    </div>
-                    <div class="row-card-section">
-                        <h4>⚡ Performance Gains</h4>
-                        <div class="benefit-box">
-                            <h5>Improvements</h5>
-                            <ul>
-                                <li><strong>Parsing speed:</strong> 2-3× faster (50μs vs 300μs)</li>
-                                <li><strong>Async operations:</strong> 50% reduction per request</li>
-                                <li><strong>Context switches:</strong> Fewer yields to event loop</li>
-                                <li><strong>Stats overhead:</strong> 90% reduction via sampling</li>
-                                <li><strong>Overall:</strong> 15-20% latency improvement</li>
-                            </ul>
-                        </div>
-                        <div class="code-block" data-lang="Before/After" style="margin-top: 15px;">
-<code><span class="comment">Request processing time:</span>
-
-<span class="string">Original (multiple readline):</span>
-  Parsing: <span class="number">300</span> μs
-  Async ops: <span class="number">4</span> per request
-  Latency: <span class="number">2.5</span> ms
-
-<span class="string">Optimized (single read):</span>
-  Parsing: <span class="number">50</span> μs
-  Async ops: <span class="number">2</span> per request
-  Latency: <span class="number">2.1</span> ms
-
-<span class="string">Per-worker: 12K → 15K req/sec</span>
-</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <div class="section-separator">
-        <span>🏗️ Architecture Comparison</span>
-    </div>
-
-    <!-- Architecture Flow Section -->
-    <section id="architecture-flow">
-        <div class="container">
-            <h2>📐 Architecture Flow Diagrams</h2>
-            <p class="section-subtitle">
-                Visual comparison: Traditional architecture that fails at 100K RPS vs our optimized architecture.
-            </p>
-
-            <div class="architecture-comparison">
-                <!-- Traditional Architecture -->
-                <div class="arch-diagram problem">
-                    <h3>❌ Traditional Architecture (Fails at 100K RPS)</h3>
-                    <pre>
-┌─────────────────────────────────┐
-│   Single-Process Server         │
-│   (Flask/Django + Gunicorn)     │
-└────────────┬────────────────────┘
-             │
-      ┌──────┴──────┐
-      │ Thread Pool │
-      │ (200 threads)│
-      └──────┬──────┘
-             │
-   ┌─────────┼─────────┬─────────┐
-   ▼         ▼         ▼         ▼
-Thread 1  Thread 2  Thread 3  Thread N
-   │         │         │         │
-   └─────────┴─────────┴─────────┘
-              ↓
-         🔒 GIL LOCK
-    (Only 1 executes at a time!)
-              ↓
-   ┌──────────────────────┐
-   │  Blocking I/O        │
-   │  - socket.recv()     │
-   │  - database.query()  │
-   │  - file.read()       │
-   │  Thread BLOCKS       │
-   └──────────────────────┘
-              ↓
-   ┌──────────────────────┐
-   │  Traditional Copy    │
-   │  Disk → User → Net   │
-   │  (2 CPU copies)      │
-   └──────────────────────┘
-</pre>
-                    <div class="arch-stats">
-                        <h4>Performance Characteristics</h4>
-                        <div class="stat-row">
-                            <span class="stat-label">Throughput:</span>
-                            <span class="stat-value bad">5,000 req/sec</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">Memory (1K concurrent):</span>
-                            <span class="stat-value bad">8 GB (200 threads × 8MB)</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">CPU Utilization:</span>
-                            <span class="stat-value bad">12% (GIL limited)</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">Latency (p99):</span>
-                            <span class="stat-value bad">200 ms</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">Context Switches:</span>
-                            <span class="stat-value bad">150,000/sec</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">Scaling:</span>
-                            <span class="stat-value bad">Poor (GIL bottleneck)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Optimized Architecture -->
-                <div class="arch-diagram solution">
-                    <h3>✅ Optimized Architecture (Achieves 120K+ RPS)</h3>
-                    <pre>
-┌────────────────────────────────────┐
-│        Master Process              │
-│     (spawns N workers)             │
-└────────┬───────────────────────────┘
+            <div class="arch-comparison">
+                <div class="arch-box">
+                    <h4>Traditional Server</h4>
+                    <div class="arch-diagram">┌──────────────────┐
+│ Single Process  │
+└────────┬─────────┘
          │
-    ┌────┴────┬────────┬────────┐
-    ▼         ▼        ▼        ▼
-Worker 1  Worker 2  ... Worker 8
-PID:1001  PID:1002      PID:1008
-Own GIL   Own GIL       Own GIL
-    │         │            │
-    ▼         ▼            ▼
-Event Loop Event Loop  Event Loop
-(epoll/IOCP)            (uvloop)
-    │         │            │
-    ▼         ▼            ▼
-Pool 2000 Pool 2000  Pool 2000
-(Semaphore)            slots
-    │         │            │
-    └─────────┴────────────┘
-              ↓
-   ┌──────────────────────┐
-   │  Async I/O           │
-   │  - await read()      │
-   │  - await query()     │
-   │  - Non-blocking      │
-   │  1000+ concurrent    │
-   └──────────────────────┘
-              ↓
-   ┌──────────────────────┐
-   │  Zero-Copy Transfer  │
-   │  Disk → Kernel → Net │
-   │  (0 user copies)     │
-   └──────────────────────┘
-</pre>
-                    <div class="arch-stats">
-                        <h4>Performance Characteristics</h4>
-                        <div class="stat-row">
-                            <span class="stat-label">Throughput:</span>
-                            <span class="stat-value good">120,000 req/sec</span>
+    ┌────┴────┐
+    │ Thread  │
+    │  Pool   │
+    │ (200)   │
+    └────┬────┘
+         │
+    Thread Thread
+     8MB    8MB
+         │
+    Blocking I/O
+    Thread IDLE
+         │
+   Traditional
+   File Transfer
+    4 Copies</div>
+                    <div class="arch-highlights">
+                        <div class="highlight-item">
+                            <div class="highlight-label">Throughput</div>
+                            <div class="highlight-value bad">5K RPS</div>
                         </div>
-                        <div class="stat-row">
-                            <span class="stat-label">Memory (16K concurrent):</span>
-                            <span class="stat-value good">450 MB (16K × 10KB)</span>
+                        <div class="highlight-item">
+                            <div class="highlight-label">Memory</div>
+                            <div class="highlight-value bad">8 GB</div>
                         </div>
-                        <div class="stat-row">
-                            <span class="stat-label">CPU Utilization:</span>
-                            <span class="stat-value good">85% (all cores)</span>
+                        <div class="highlight-item">
+                            <div class="highlight-label">CPU Usage</div>
+                            <div class="highlight-value bad">12.5%</div>
                         </div>
-                        <div class="stat-row">
-                            <span class="stat-label">Latency (p99):</span>
-                            <span class="stat-value good">28 ms</span>
+                        <div class="highlight-item">
+                            <div class="highlight-label">Latency</div>
+                            <div class="highlight-value bad">200ms</div>
                         </div>
-                        <div class="stat-row">
-                            <span class="stat-label">Context Switches:</span>
-                            <span class="stat-value good">5,000/sec</span>
+                    </div>
+                </div>
+
+                <div class="arch-box">
+                    <h4>Optimized Server</h4>
+                    <div class="arch-diagram">┌──────────────────┐
+│ Master Process   │
+└────────┬─────────┘
+         │
+  ┌──────┼──────┐
+Worker Worker Worker
+PID:1  PID:2  PID:8
+  │      │      │
+Event  Event  Event
+Loop   Loop   Loop
+(uvloop + epoll)
+  │      │      │
+Pool   Pool   Pool
+2000   2000   2000
+         │
+  Non-Blocking I/O
+  1000+ Sockets
+         │
+    Zero-Copy
+   sendfile()</div>
+                    <div class="arch-highlights">
+                        <div class="highlight-item">
+                            <div class="highlight-label">Throughput</div>
+                            <div class="highlight-value good">120K RPS</div>
                         </div>
-                        <div class="stat-row">
-                            <span class="stat-label">Scaling:</span>
-                            <span class="stat-value good">Linear (100% efficiency)</span>
+                        <div class="highlight-item">
+                            <div class="highlight-label">Memory</div>
+                            <div class="highlight-value good">450 MB</div>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-label">CPU Usage</div>
+                            <div class="highlight-value good">85%</div>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-label">Latency</div>
+                            <div class="highlight-value good">28ms</div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Request Flow Comparison -->
-            <div style="margin-top: 80px;">
-                <h3 style="text-align: center; font-size: 2.2em; color: var(--primary); margin-bottom: 50px;">
-                    Request Processing Flow
-                </h3>
-                
-                <div class="architecture-comparison">
-                    <!-- Traditional Flow -->
-                    <div class="arch-diagram problem">
-                        <h3>❌ Traditional Request Flow</h3>
-                        <pre>
-1. Accept connection
-   ↓ Create new thread (8MB)
-   
-2. Acquire GIL
-   ↓ Wait for lock...
-   
-3. Read request
-   ↓ BLOCKS thread (readline × 3)
-   ↓ 300μs overhead
-   
-4. Parse request
-   ↓ Dynamic typing overhead
-   
-5. Process request
-   ↓ Still holding GIL
-   
-6. Read file (traditional)
-   ↓ open() → read() → write()
-   ↓ 2 memory copies
-   ↓ 258 syscalls for 1MB
-   
-7. Send response
-   ↓ BLOCKS thread
-   
-8. Close connection
-   ↓ Destroy thread
-   
-9. Update shared stats
-   ↓ Acquire stats_lock
-   ↓ All other threads wait
-   ↓ Release stats_lock
-
-Total: ~100ms per request
-Concurrent: 200 max
-</pre>
+    <!-- Key Architectural Decisions -->
+    <section>
+        <div class="container">
+            <div class="key-points fade-in">
+                <h3>Key Architectural Decisions</h3>
+                <div class="points-grid">
+                    <div class="point-card">
+                        <div class="point-icon">⚡</div>
+                        <h5>Event-Driven Design</h5>
+                        <p>Single thread monitors thousands of sockets using epoll/IOCP with O(1) complexity</p>
                     </div>
 
-                    <!-- Optimized Flow -->
-                    <div class="arch-diagram solution">
-                        <h3>✅ Optimized Request Flow</h3>
-                        <pre>
-1. Accept connection
-   ↓ Reuse coroutine (10KB)
-   
-2. Acquire pool slot
-   ↓ Semaphore (FIFO, no GIL)
-   
-3. Read request
-   ↓ Single await read(8192)
-   ↓ 50μs overhead
-   ↓ Yields to event loop
-   
-4. Parse request
-   ↓ Pre-compiled regex
-   ↓ Fast byte operations
-   
-5. Process request
-   ↓ Worker has own GIL
-   
-6. Send file (zero-copy)
-   ↓ sendfile() syscall
-   ↓ 0 user-space copies
-   ↓ 1 syscall for 1MB
-   
-7. Send response
-   ↓ Batched write + drain
-   ↓ Single await
-   
-8. Close connection
-   ↓ Reuse coroutine
-   
-9. Update local stats
-   ↓ No locks (per-worker)
-   ↓ Sampled (every 100th)
+                    <div class="point-card">
+                        <div class="point-icon">🔄</div>
+                        <h5>GIL Bypass</h5>
+                        <p>Multiple processes (one per CPU core) each with independent GIL for true parallelism</p>
+                    </div>
 
-Total: ~2ms per request
-Concurrent: 16,000 max
-</pre>
+                    <div class="point-card">
+                        <div class="point-icon">🚀</div>
+                        <h5>uvloop Integration</h5>
+                        <p>Cython-based event loop using libuv provides 2-4× performance boost over default asyncio</p>
+                    </div>
+
+                    <div class="point-card">
+                        <div class="point-icon">📡</div>
+                        <h5>SO_REUSEPORT</h5>
+                        <p>Kernel-level load balancing distributes connections across worker processes efficiently</p>
+                    </div>
+
+                    <div class="point-card">
+                        <div class="point-icon">📊</div>
+                        <h5>Connection Pooling</h5>
+                        <p>2000 slots per worker with semaphore-based concurrency control prevents overload</p>
+                    </div>
+
+                    <div class="point-card">
+                        <div class="point-icon">⚙️</div>
+                        <h5>Zero-Copy I/O</h5>
+                        <p>sendfile() syscall eliminates user-space copies reducing CPU usage by 40%</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Results Image Section -->
+    <section class="results-section fade-in">
+        <div class="container">
+            <h2>Performance Results</h2>
+            <p class="section-subtitle">Benchmark results on 8-core CPU</p>
+
+            <div class="results-image-container">
+                <img 
+                    src="/images/ach_result.jpeg" 
+                    alt="Performance Benchmark Results"
+                />
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Scroll Animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
 </body>
 </html>
