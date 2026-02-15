@@ -451,27 +451,54 @@
             line-height: 1.7;
         }
 
-        /* Results Image Section */
+        /* Results Section */
         .results-section {
             text-align: center;
             padding: 100px 40px;
             background: white;
         }
 
-        .results-image-container {
-            max-width: 1200px;
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            max-width: 1000px;
             margin: 60px auto 0;
-            background: var(--light);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
         }
 
-        .results-image-container img {
-            width: 100%;
-            height: auto;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        .result-card {
+            background: var(--light);
+            padding: 50px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.12);
+        }
+
+        .result-card h3 {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 30px;
+        }
+
+        .result-value {
+            font-size: 4em;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .result-label {
+            font-size: 1.2em;
+            color: var(--gray);
+            font-weight: 500;
         }
 
         /* Responsive */
@@ -481,6 +508,7 @@
             .arch-comparison { grid-template-columns: 1fr; }
             .problems-grid { grid-template-columns: 1fr; }
             .solutions-grid { grid-template-columns: 1fr; }
+            .results-grid { grid-template-columns: 1fr; }
             section { padding: 60px 20px; }
         }
 
@@ -690,38 +718,21 @@
 └────────┬─────────┘
          │
     ┌────┴────┐
-    │ Thread  │
-    │  Pool   │
-    │ (200)   │
-    └────┬────┘
+    │         │
+Request → Thread
+    │         │
+Request → Thread
+    │         │
+Request → Thread
+    │         │
+Request → Thread
          │
-    Thread Thread
-     8MB    8MB
+    Each Request
+    Creates New
+      Thread
          │
     Blocking I/O
-    Thread IDLE
-         │
-   Traditional
-   File Transfer
-    4 Copies</div>
-                    <div class="arch-highlights">
-                        <div class="highlight-item">
-                            <div class="highlight-label">Throughput</div>
-                            <div class="highlight-value bad">5K RPS</div>
-                        </div>
-                        <div class="highlight-item">
-                            <div class="highlight-label">Memory</div>
-                            <div class="highlight-value bad">8 GB</div>
-                        </div>
-                        <div class="highlight-item">
-                            <div class="highlight-label">CPU Usage</div>
-                            <div class="highlight-value bad">12.5%</div>
-                        </div>
-                        <div class="highlight-item">
-                            <div class="highlight-label">Latency</div>
-                            <div class="highlight-value bad">200ms</div>
-                        </div>
-                    </div>
+    Thread IDLE</div>
                 </div>
 
                 <div class="arch-box">
@@ -746,24 +757,6 @@ Pool   Pool   Pool
          │
     Zero-Copy
    sendfile()</div>
-                    <div class="arch-highlights">
-                        <div class="highlight-item">
-                            <div class="highlight-label">Throughput</div>
-                            <div class="highlight-value good">120K RPS</div>
-                        </div>
-                        <div class="highlight-item">
-                            <div class="highlight-label">Memory</div>
-                            <div class="highlight-value good">450 MB</div>
-                        </div>
-                        <div class="highlight-item">
-                            <div class="highlight-label">CPU Usage</div>
-                            <div class="highlight-value good">85%</div>
-                        </div>
-                        <div class="highlight-item">
-                            <div class="highlight-label">Latency</div>
-                            <div class="highlight-value good">28ms</div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -815,17 +808,24 @@ Pool   Pool   Pool
         </div>
     </section>
 
-    <!-- Results Image Section -->
+    <!-- Performance Results Section -->
     <section class="results-section fade-in">
         <div class="container">
             <h2>Performance Results</h2>
-            <p class="section-subtitle">Benchmark results on 8-core CPU</p>
+            <p class="section-subtitle">Benchmark results under different network conditions</p>
 
-            <div class="results-image-container">
-                <img 
-                    src="/images/ach_result.jpeg" 
-                    alt="Performance Benchmark Results"
-                />
+            <div class="results-grid">
+                <div class="result-card">
+                    <h3>Same Machine</h3>
+                    <div class="result-value">30K</div>
+                    <div class="result-label">Requests Per Second</div>
+                </div>
+
+                <div class="result-card">
+                    <h3>Shared Network</h3>
+                    <div class="result-value">3K</div>
+                    <div class="result-label">Requests Per Second</div>
+                </div>
             </div>
         </div>
     </section>
