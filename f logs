@@ -36,3 +36,46 @@ Running 1s test @ http://0.0.0.0:8080/health
   61390 requests in 1.02s, 14.17MB read
 Requests/sec:  60421.86
 Transfer/sec:     13.94MB
+
+###################################################################################################
+###################################################################################################
+###################################################################################################
+
+
+                                    Machine to Machine
+
+
+###################################################################################################
+###################################################################################################
+###################################################################################################
+ 
+smoawad@localhost:~/Downloads/Pro/100K-RPS-problem$ wrk -t4 -c200 -d1s http://192.168.1.126:8080/health
+Running 1s test @ http://192.168.1.126:8080/health
+  4 threads and 200 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    33.86ms    5.96ms  60.72ms   74.91%
+    Req/Sec   744.60    109.20     0.92k    57.50%
+  2977 requests in 1.02s, 703.55KB read
+Requests/sec:   2932.55
+Transfer/sec:    693.04KB
+
+smoawad@localhost:~/Downloads/Pro/100K-RPS-problem$ wrk -t4 -c200 -d1s http://192.168.1.126:8080/odood
+Running 1s test @ http://192.168.1.126:8080/odood
+  4 threads and 200 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    33.76ms    4.77ms  49.47ms   73.00%
+    Req/Sec   759.78    131.74     1.00k    67.50%
+  3033 requests in 1.01s, 476.87KB read
+  Non-2xx or 3xx responses: 3033
+Requests/sec:   2991.20
+Transfer/sec:    470.30KB
+smoawad@localhost:~/Downloads/Pro/100K-RPS-problem$ wrk -t4 -c200 -d1s http://192.168.1.126:8080/health
+Running 1s test @ http://192.168.1.126:8080/health
+  4 threads and 200 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    33.76ms    6.13ms  66.48ms   78.07%
+    Req/Sec   771.08     88.84     0.96k    67.50%
+  3078 requests in 1.01s, 727.42KB read
+Requests/sec:   3044.93
+Transfer/sec:    719.60KB
+
